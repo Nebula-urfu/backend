@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, field_validator
 from typing_extensions import Annotated
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=6000)]
@@ -13,7 +13,9 @@ Positive = Annotated[Decimal, Field(gt=0, max_digits=14, decimal_places=2)]
 
 class RequestInput(BaseModel):
     description: Text
-    entrance: Short
+    entrance: LocationPart | None = None
+    floor: LocationPart | None = None
+    apartment: LocationPart | None = None
     photoFileIds: list[Short] = Field(min_length=1, max_length=5)
 
 
@@ -116,3 +118,21 @@ class DescriptionDraftInput(BaseModel):
 
 class DescriptionDraftResponse(BaseModel):
     description: str
+
+
+LocationPart = Annotated[str, StringConstraints(strip_whitespace=True, max_length=30)]
+Phone = Annotated[str, StringConstraints(strip_whitespace=True, max_length=32, pattern=r"^(?:\+?[0-9() .-]{7,32})?$")]
+
+
+class ProfileFields(BaseModel):
+    entrance: LocationPart = ""
+    floor: LocationPart = ""
+    apartment: LocationPart = ""
+    phone: Phone = ""
+
+    @field_validator("phone")
+    @classmethod
+    def valid_phone(cls, value):
+        if value and not 7 <= sum(char.isdigit() for char in value) <= 15:
+            raise ValueError("Введите телефон с 7–15 цифрами")
+        return value

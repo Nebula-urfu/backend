@@ -37,8 +37,11 @@ def find(conn, user, ident, lock=False):
     return row
 
 
-def actor(user):
-    return {"userId": user.id, "displayName": user.name}
+def actor(user, include_phone=False):
+    result = {"userId": user.id, "displayName": user.name}
+    if include_phone and user.phone:
+        result["phone"] = user.phone
+    return result
 
 
 def save(conn, row):
@@ -62,6 +65,9 @@ def summary(row, resident, detail=False):
     result.update(id=row.id, status=d["status"], photoId=d["photos"][0]["fileId"])
     if detail:
         result["photos"] = d["photos"]
+        for field in ("residentName", "floor", "apartment"):
+            if field in d:
+                result[field] = d[field]
         if resident and d.get("intake", {}).get("pending"):
             result["clarificationQuestions"] = d["intake"]["questions"]
     if not resident:
@@ -121,7 +127,12 @@ def create_request(body: RequestInput, user: User, conn: Conn,
     fingerprint = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
     ident = uid()
     created_at = stamp()
-    d = dict(body.model_dump(exclude={"photoFileIds"}), address=user.address, createdAt=created_at,
+    entrance = user.entrance if body.entrance is None else body.entrance
+    if not entrance or not user.address:
+        raise invalid("Укажите адрес и подъезд")
+    d = dict(description=body.description, address=user.address, entrance=entrance, createdAt=created_at,
+             residentName=user.name, floor=user.floor if body.floor is None else body.floor,
+             apartment=user.apartment if body.apartment is None else body.apartment,
              updatedAt=created_at, status="ACCEPTED", author=actor(user), photos=[], quotes={},
              automatic=AUTO_WORKFLOW, scopeRevision=0, waitingFor="TZ",
              triage=dict(state="PROCESSING" if AI_ENABLED else "DRAFT_READY", proposal=None, confirmed=None),

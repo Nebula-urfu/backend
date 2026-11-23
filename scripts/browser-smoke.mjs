@@ -66,7 +66,21 @@ try {
   const resident = await login('resident')
   const staff = await login('staff')
   const reviewer = await login('reviewer')
+  await resident.goto(root + "/profile?next=request")
+  await resident.getByLabel("ФИО", { exact: true }).fill("Житель Браузерный Тест")
+  await resident.getByLabel("Полный адрес").fill("Екатеринбург, улица Тестовая, дом 1")
+  await resident.getByLabel("Подъезд", { exact: true }).fill("3")
+  await resident.getByLabel("Этаж", { exact: true }).fill("4")
+  await resident.getByLabel("Квартира", { exact: true }).fill("12")
+  await button(resident, "Сохранить профиль").click()
+  await resident.waitForURL("**/requests/new")
   await resident.goto(root + '/requests/new')
+  assert.equal(await resident.locator("#entrance").inputValue(), "3")
+  assert.equal(await resident.getByLabel("Этаж", { exact: true }).inputValue(), "4")
+  assert.equal(await resident.getByLabel("Квартира", { exact: true }).inputValue(), "12")
+  await resident.locator("#entrance").fill("9")
+  await button(resident, "Подставить из профиля").click()
+  assert.equal(await resident.locator("#entrance").inputValue(), "3")
   await resident.route("**/api/v1/requests/description-draft", route => route.fulfill({
     json: { description: "На потолке видны следы протечки." },
   }))
@@ -78,6 +92,7 @@ try {
   await button(resident, 'Отправить заявку').click()
   const request = await (await created).json()
   assert(request.description === "Протечка крыши, браузерный сценарий")
+  assert(request.residentName === "Житель Браузерный Тест" && request.apartment === "12")
   const path = root + '/requests/' + request.id
 
   await staff.goto(path)

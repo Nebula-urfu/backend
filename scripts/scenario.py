@@ -30,6 +30,8 @@ def login(name):
 
 def run():
     resident, staff, reviewer, outsider, neighbor = [login(name) for name in ("resident", "staff", "reviewer", "outsider", "neighbor")]
+    call(staff, "PUT", "/session/profile", json={"displayName": "Сотрудник УК", "phone": "+7 (900) 100-00-01"})
+    call(reviewer, "PUT", "/session/profile", json={"displayName": "Проверяющий УК", "phone": "+7 (900) 100-00-02"})
     picture = io.BytesIO()
     Image.new("RGB", (12, 12), "green").save(picture, format="PNG")
     fid = call(resident, "POST", "/files", 201, files={"file": ("roof.png", picture.getvalue())}).json()["fileId"]
@@ -72,10 +74,13 @@ def run():
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(lambda _: reviewer.post(approval + "/approve", json={"subjectVersion": tz["version"]}).status_code, range(2)))
     assert sorted(outcomes) == [200, 409], outcomes
+    approved = call(reviewer, "GET", approval).json()
+    assert approved["decidedBy"]["phone"] == "+7 (900) 100-00-02"
 
     companies = call(staff, "GET", "/contractors").json()["items"]
     draft = call(staff, "POST", p + "/quote-requests", 201, json={"contractorIds": [c["id"] for c in companies]}).json()
     assert len(draft["attachments"]) == 2
+    assert "Сотрудник УК" in draft["body"] and "+7 (900) 100-00-01" in draft["body"]
     quotes = []
     for i, company in enumerate(companies):
         fid = call(staff, "POST", "/files", 201, files={"file": ("quote.txt", b"Offer")}).json()["fileId"]

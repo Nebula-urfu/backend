@@ -9,15 +9,40 @@
             "title": "Address",
             "type": "string"
           },
+          "apartment": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Apartment",
+            "type": "string"
+          },
           "enabled": {
             "default": true,
             "title": "Enabled",
             "type": "boolean"
           },
+          "entrance": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Entrance",
+            "type": "string"
+          },
+          "floor": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Floor",
+            "type": "string"
+          },
           "name": {
             "maxLength": 200,
             "minLength": 1,
             "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[0-9() .-]{7,32})?$",
+            "title": "Phone",
             "type": "string"
           },
           "roles": {
@@ -61,10 +86,28 @@
             "title": "Address",
             "type": "string"
           },
+          "apartment": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Apartment",
+            "type": "string"
+          },
           "enabled": {
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "entrance": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Entrance",
+            "type": "string"
+          },
+          "floor": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Floor",
+            "type": "string"
           },
           "name": {
             "maxLength": 200,
@@ -76,6 +119,13 @@
             "maxLength": 256,
             "minLength": 12,
             "title": "Password",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[0-9() .-]{7,32})?$",
+            "title": "Phone",
             "type": "string"
           },
           "roles": {
@@ -146,10 +196,28 @@
             "title": "Address",
             "type": "string"
           },
+          "apartment": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Apartment",
+            "type": "string"
+          },
           "enabled": {
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "entrance": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Entrance",
+            "type": "string"
+          },
+          "floor": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Floor",
+            "type": "string"
           },
           "name": {
             "maxLength": 200,
@@ -169,6 +237,13 @@
               }
             ],
             "title": "Password"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[0-9() .-]{7,32})?$",
+            "title": "Phone",
+            "type": "string"
           },
           "roles": {
             "items": {
@@ -198,6 +273,17 @@
           "displayName": {
             "title": "Displayname",
             "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           },
           "userId": {
             "title": "Userid",
@@ -1530,6 +1616,52 @@
         "title": "ProblemView",
         "type": "object"
       },
+      "ProfileUpdate": {
+        "properties": {
+          "address": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Address",
+            "type": "string"
+          },
+          "apartment": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Apartment",
+            "type": "string"
+          },
+          "displayName": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "entrance": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Entrance",
+            "type": "string"
+          },
+          "floor": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Floor",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[0-9() .-]{7,32})?$",
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "title": "ProfileUpdate",
+        "type": "object"
+      },
       "ProviderStat": {
         "properties": {
           "averageLatencyMs": {
@@ -2019,6 +2151,17 @@
             "title": "Address",
             "type": "string"
           },
+          "apartment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apartment"
+          },
           "author": {
             "anyOf": [
               {
@@ -2105,6 +2248,17 @@
             "title": "Entrance",
             "type": "string"
           },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2119,6 +2273,17 @@
             },
             "title": "Photos",
             "type": "array"
+          },
+          "residentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residentname"
           },
           "status": {
             "enum": [
@@ -2191,6 +2356,18 @@
       },
       "RequestInput": {
         "properties": {
+          "apartment": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apartment"
+          },
           "description": {
             "maxLength": 6000,
             "minLength": 1,
@@ -2198,10 +2375,28 @@
             "type": "string"
           },
           "entrance": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Entrance",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrance"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
           },
           "photoFileIds": {
             "items": {
@@ -2217,7 +2412,6 @@
         },
         "required": [
           "description",
-          "entrance",
           "photoFileIds"
         ],
         "title": "RequestInput",
@@ -2454,6 +2648,12 @@
             "title": "Address",
             "type": "string"
           },
+          "apartment": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Apartment",
+            "type": "string"
+          },
           "csrfToken": {
             "title": "Csrftoken",
             "type": "string"
@@ -2462,8 +2662,27 @@
             "title": "Displayname",
             "type": "string"
           },
+          "entrance": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Entrance",
+            "type": "string"
+          },
+          "floor": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Floor",
+            "type": "string"
+          },
           "orgId": {
             "title": "Orgid",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[0-9() .-]{7,32})?$",
+            "title": "Phone",
             "type": "string"
           },
           "role": {
@@ -6895,6 +7114,97 @@
           }
         },
         "summary": "Login",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/api/v1/session/profile": {
+      "put": {
+        "operationId": "update_profile_api_v1_session_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Update Profile",
         "tags": [
           "session"
         ]

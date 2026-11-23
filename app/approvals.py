@@ -36,7 +36,7 @@ def submit(ident: str, kind: Literal["tz", "nmc", "package"], body: VersionInput
         doc["triageSummary"] = triage
     approval = dict(id=uid(), requestId=ident, subjectType=KINDS[kind], subjectVersion=body.version,
                     state="PENDING", urgency=triage["urgency"], address=row.data["address"],
-                    submittedBy=actor(user), submittedAt=stamp(), subject=deepcopy(doc))
+                    submittedBy=actor(user, include_phone=True), submittedAt=stamp(), subject=deepcopy(doc))
     conn.execute(approvals.insert().values(id=approval["id"], request_id=ident, org=user.org,
                                           kind=kind, version=body.version, data=approval))
     save(conn, row)
@@ -138,7 +138,7 @@ def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput
             doc["approvedAt"] = stamp()
             row.data["status"] = "COMPLETED"
             row.data.pop("waitingFor", None)
-    approval.data.update(state="APPROVED" if passed else "REJECTED", decidedBy=actor(user), decidedAt=stamp(), comment=comment or None)
+    approval.data.update(state="APPROVED" if passed else "REJECTED", decidedBy=actor(user, include_phone=True), decidedAt=stamp(), comment=comment or None)
     conn.execute(update(approvals).where(approvals.c.id == ident).values(data=approval.data))
     if auto_package and corrections:
         advance(conn, row)

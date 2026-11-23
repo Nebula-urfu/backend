@@ -9,12 +9,13 @@ from typing import Annotated, Literal
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from .db import attempts, connection, engine, now, sessions, users
-from .errors import Problem
+from .errors import Problem, invalid
+from .schemas import ProfileFields
 
 router = APIRouter(tags=["session"])
 PASSWORDS = PasswordHasher()
@@ -31,7 +32,7 @@ class Credentials(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
-class Profile(BaseModel):
+class Profile(ProfileFields):
     userId: str
     displayName: str
     role: Role
@@ -56,7 +57,8 @@ def active_user(user, role):
 
 
 def profile(user):
-    return dict(userId=user.id, displayName=user.name, role=user.role, roles=assigned_roles(user), orgId=user.org, address=user.address)
+    return dict(userId=user.id, displayName=user.name, role=user.role, roles=assigned_roles(user), orgId=user.org, address=user.address, entrance=user.entrance,
+                floor=user.floor, apartment=user.apartment, phone=user.phone)
 
 
 def csrf(token):
@@ -156,3 +158,22 @@ def switch_role(body: RoleInput, request: Request, user: User, conn: Conn):
     conn.execute(update(sessions).where(sessions.c.id == digest(token)).values(active_role=body.role))
     user.role = body.role
     return {**profile(user), "csrfToken": csrf(token)}
+
+
+class ProfileUpdate(ProfileFields):
+    displayName: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    address: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+@router.put("/session/profile", response_model=SessionProfile)
+def update_profile(body: ProfileUpdate, request: Request, user: User, conn: Conn):
+    roles = assigned_roles(user)
+    values = {"name": body.displayName}
+    if "RESIDENT" in roles:
+        if not body.address:
+            raise invalid("Укажите полный адрес")
+        values.update(address=body.address, entrance=body.entrance, floor=body.floor, apartment=body.apartment)
+    if "STAFF" in roles or "REVIEWER" in roles:
+        values["phone"] = body.phone
+    row = conn.execute(update(users).where(users.c.id == user.id).values(**values).returning(users)).one()
+    return {**profile(active_user(row, user.role)), "csrfToken": csrf(request.cookies[COOKIE])}

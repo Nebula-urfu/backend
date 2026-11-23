@@ -10,13 +10,14 @@ from .auth import Conn, PASSWORDS, Role, User, allow, assigned_roles
 from .db import jobs, model_usage, now, requests, sessions, uid, users
 from .errors import Problem, invalid, missing
 from .requests import page
+from .schemas import ProfileFields
 
 router = APIRouter(prefix="/admin", tags=["administration"])
 Username = Annotated[str, StringConstraints(strip_whitespace=True, to_lower=True, min_length=2, max_length=128, pattern=r"^[a-z0-9_.-]+$")]
 Password = Annotated[str, Field(min_length=12, max_length=256)]
 
 
-class AccountInput(BaseModel):
+class AccountInput(ProfileFields):
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=300)
     roles: list[Role] = Field(min_length=1, max_length=4)
@@ -54,7 +55,8 @@ class AccountPage(BaseModel):
 
 def public(row):
     return dict(userId=row.id, username=row.username, name=row.name, address=row.address,
-                roles=assigned_roles(row), enabled=row.enabled)
+                roles=assigned_roles(row), enabled=row.enabled, entrance=row.entrance,
+                floor=row.floor, apartment=row.apartment, phone=row.phone)
 
 
 @router.get("/users", response_model=AccountPage)
@@ -89,12 +91,12 @@ def edit_user(ident: str, body: AccountUpdate, user: User, conn: Conn):
     row = conn.execute(select(users).where(users.c.id == ident, users.c.org == user.org).with_for_update()).first()
     if not row:
         raise missing()
-    values = body.model_dump(exclude={"password"})
+    values = body.model_dump(exclude={"password"}, exclude_unset=True)
     values["role"] = row.role if row.role in body.roles else body.roles[0]
     if body.password:
         values["password"] = PASSWORDS.hash(body.password)
     updated = conn.execute(update(users).where(users.c.id == ident).values(**values).returning(users)).one()
-    if body.password or body.enabled != row.enabled or set(body.roles) != set(assigned_roles(row)):
+    if body.password or updated.enabled != row.enabled or set(body.roles) != set(assigned_roles(row)):
         conn.execute(delete(sessions).where(sessions.c.user_id == ident))
     return public(updated)
 

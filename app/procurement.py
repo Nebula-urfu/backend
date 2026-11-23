@@ -55,10 +55,15 @@ def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
     if any(i not in records for i in body.contractorIds):
         raise missing()
     letter = row.data["tz"].get("letter") or {}
+    text = letter.get("body", "Просим указать полную стоимость работ по приложенному ТЗ, сроки и гарантию.")
+    signature = "\n".join(filter(None, (user.name, "Телефон: " + user.phone if user.phone else "")))
+    text = text.replace("[Ваше имя]", user.name).replace("[Ваш телефон]", user.phone)
+    if user.name not in text or (user.phone and user.phone not in text):
+        text += "\n\nКонтакт УК:\n" + signature
     return dict(id=uid(), recipients=[
         {"contractorId": i, "name": records[i]["name"], "email": records[i]["email"]} for i in dict.fromkeys(body.contractorIds)
     ], subject=letter.get("subject", "Запрос коммерческого предложения"),
-        body=letter.get("body", "Просим указать полную стоимость работ по приложенному ТЗ, сроки и гарантию."),
+        body=text,
         attachments=generate(conn, user, row, row.data["tz"]["version"]))
 
 

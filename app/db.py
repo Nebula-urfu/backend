@@ -22,6 +22,7 @@ users = table(
     Column("username", String, unique=True, nullable=False),
     Column("roles", ARRAY(String), nullable=False, server_default="{}"),
     Column("enabled", Boolean, nullable=False, server_default="true"),
+    *(Column(field, String, nullable=False, server_default="") for field in ("entrance", "floor", "apartment", "phone")),
     *(Column(field, String, nullable=False) for field in ("password", "role", "name", "address")),
 )
 sessions = table(

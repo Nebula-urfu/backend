@@ -21,6 +21,7 @@ class Page(BaseModel, Generic[T]):
 class Actor(BaseModel):
     userId: str
     displayName: str
+    phone: str | None = None
 
 
 class FileRef(BaseModel):
@@ -53,6 +54,9 @@ class RequestSummary(BaseModel):
 
 
 class RequestDetail(RequestSummary):
+    residentName: str | None = None
+    floor: str | None = None
+    apartment: str | None = None
     photos: list[FileRef]
     author: Actor | None = None
     steps: list[StepInfo] | None = None
