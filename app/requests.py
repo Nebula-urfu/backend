@@ -13,7 +13,7 @@ from .errors import invalid, missing, require, version
 from .schemas import RequestInput, TriageInput, TzInput
 
 router = APIRouter(tags=["requests"])
-AI_ENABLED = bool(os.getenv("OPENAI_API_KEY"))
+AI_ENABLED = bool(os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_BASE_URL"))
 STEPS = ("TRIAGE", "TZ", "QUOTES_NMC", "TENDER", "PACKAGE")
 SECTIONS = {
     "scope": "Предмет работ", "volume": "Объём и материалы",
