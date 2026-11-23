@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from .db import attempts, connection, engine, now, sessions, users
 from .errors import Problem, invalid
+from .logging_config import event
 from .schemas import ProfileFields
 
 router = APIRouter(tags=["session"])
@@ -130,6 +131,7 @@ def login(body: Credentials, request: Request, response: Response):
             conn.execute(sessions.insert().values(id=digest(token), user_id=user.id, expires=current + LIFETIME))
     if not authenticated:
         raise Problem(401, "INVALID_CREDENTIALS", "Неверный логин или пароль")
+    event("session.login", user_id=user.id, organization_id=user.org)
     response.set_cookie(COOKIE, token, httponly=True, secure=SECURE, samesite="strict",
                         max_age=int(LIFETIME.total_seconds()), path="/api/v1")
     return {**profile(active_user(user, None)), "csrfToken": csrf(token)}
@@ -143,6 +145,7 @@ def session(request: Request, user: User):
 @router.delete("/session", status_code=204)
 def logout(request: Request, response: Response, user: User, conn: Conn):
     conn.execute(delete(sessions).where(sessions.c.id == digest(request.cookies[COOKIE])))
+    event("session.logout", user_id=user.id, organization_id=user.org)
     response.delete_cookie(COOKIE, path="/api/v1", secure=SECURE, httponly=True, samesite="strict")
 
 
@@ -157,6 +160,7 @@ def switch_role(body: RoleInput, request: Request, user: User, conn: Conn):
     token = request.cookies[COOKIE]
     conn.execute(update(sessions).where(sessions.c.id == digest(token)).values(active_role=body.role))
     user.role = body.role
+    event("session.role_changed", user_id=user.id, organization_id=user.org, role=body.role)
     return {**profile(user), "csrfToken": csrf(token)}
 
 

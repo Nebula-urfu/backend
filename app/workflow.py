@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 
 from .db import approvals, contractors, stamp, uid
 from .errors import invalid
+from .logging_config import event
 from .requests import working_doc, state
 
 MIN_QUOTES = int(os.getenv("MIN_QUOTES", "3"))
@@ -76,6 +77,7 @@ def advance(conn, row, preferred=None, selected_by=None, comment=""):
     tz = d["tz"]
     if d["triage"]["state"] != "APPROVED" or not complete_tz(tz) or tz["state"] == "PROCESSING":
         d["waitingFor"] = "TZ"
+        event("workflow.waiting", procurement_id=row.id, stage="TZ", triage_state=d["triage"]["state"], tz_state=tz["state"])
         return
     tz["triageSummary"] = d["triage"]["confirmed"].copy()
     state(tz, "APPROVED")
@@ -84,6 +86,7 @@ def advance(conn, row, preferred=None, selected_by=None, comment=""):
     current = [q for q in quotes.values() if q.get("scopeRevision", 0) == revision]
     if any(q["extraction"] == "EXTRACTING" for q in current):
         d["waitingFor"] = "EXTRACTION"
+        event("workflow.waiting", procurement_id=row.id, stage="EXTRACTION", quote_count=len(current), scope_revision=revision)
         state(nmc, "PROCESSING")
         return
 
@@ -103,6 +106,8 @@ def advance(conn, row, preferred=None, selected_by=None, comment=""):
         ids.append(quote["id"])
     if len(ids) < MIN_QUOTES:
         d["waitingFor"] = "QUOTES"
+        event("workflow.waiting", procurement_id=row.id, stage="QUOTES", usable_quotes=len(ids), required_quotes=MIN_QUOTES,
+              stale_quotes=len(quotes) - len(current), scope_revision=revision)
         return
     if preferred is not None and preferred not in ids:
         raise invalid("Выберите подрядчика из актуального расчёта")
@@ -134,11 +139,14 @@ def advance(conn, row, preferred=None, selected_by=None, comment=""):
                     submittedBy=SYSTEM_ACTOR, submittedAt=stamp(), subject=package.copy())
     conn.execute(approvals.insert().values(id=approval["id"], request_id=row.id, org=row.org,
                                           kind="package", version=package["version"], data=approval))
+    event("workflow.package_ready", procurement_id=row.id, approval_id=approval["id"], package_version=package["version"],
+          tz_version=tz["version"], nmc_version=nmc["version"], quote_count=len(ids), winner_quote_id=winner["id"])
 
 
 def scope_changed(row, refresh_letter=True):
     d = row.data
     d["scopeRevision"] = d.get("scopeRevision", 0) + 1
+    event("workflow.scope_changed", procurement_id=row.id, scope_revision=d["scopeRevision"])
     tz = d["tz"]
     if refresh_letter and tz.get("letter") and complete_tz(tz):
         draft = tz["letter"]

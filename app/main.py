@@ -14,7 +14,7 @@ from . import admin, approvals, auth, documents, procurement, requests
 from .ai import worker
 from .auth import Conn
 from .errors import Problem
-from .logging_config import configure, event, request_id
+from .logging_config import configure, error_fields, event, request_id
 from .views import ProblemView
 
 
@@ -45,7 +45,7 @@ async def private_api(request, call_next):
         try:
             response = await call_next(request)
         except Exception as exc:
-            event("http.unhandled_error", logging.ERROR, error_type=type(exc).__name__)
+            event("http.unhandled_error", logging.ERROR, **error_fields(exc))
             response = JSONResponse({"status": 500, "title": "Внутренняя ошибка сервера"},
                                     status_code=500, media_type="application/problem+json")
         response.headers["X-Request-ID"] = correlation

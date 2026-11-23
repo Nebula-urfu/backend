@@ -36,3 +36,16 @@ def configure():
 
 def event(name, level=logging.INFO, **fields):
     log.log(level, name, extra={"fields": fields})
+
+
+def error_fields(exc):
+    from pathlib import Path
+    from traceback import extract_tb
+
+    return {
+        "error_type": type(exc).__name__,
+        "frames": [
+            {"file": Path(frame.filename).name, "line": frame.lineno, "function": frame.name}
+            for frame in extract_tb(exc.__traceback__, limit=-8)
+        ],
+    }

@@ -14,6 +14,7 @@ from .views import FileRef
 from .auth import Conn, User, allow
 from .db import STORAGE, files, uid
 from .errors import invalid, missing, require, version as check_version
+from .logging_config import event
 from .requests import find
 
 router = APIRouter(tags=["files"])
@@ -34,6 +35,8 @@ def store(conn, owner, name, media_type, content, request_id=None, purpose=None,
     data = dict(fileId=ident, name=name, mediaType=media_type, sizeBytes=len(content))
     conn.execute(files.insert().values(id=ident, owner=owner, request_id=request_id,
                                       purpose=purpose, version=version, data=data))
+    event("file.stored", file_id=ident, procurement_id=request_id, media_type=media_type,
+          size_bytes=len(content), purpose=purpose or "upload")
     return data
 
 

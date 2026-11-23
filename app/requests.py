@@ -93,6 +93,7 @@ def attach(conn, user, row_id, ids, purpose, types=None):
     if types and any(r.data["mediaType"] not in types for r in records):
         raise invalid("Неподдерживаемый формат фотографии")
     conn.execute(update(files).where(files.c.id.in_(ids)).values(request_id=row_id, purpose=purpose))
+    event("files.attached", procurement_id=row_id, purpose=purpose, file_count=len(records))
     indexed = {r.id: r.data for r in records}
     return [indexed[i] for i in ids]
 
@@ -100,8 +101,10 @@ def attach(conn, user, row_id, ids, purpose, types=None):
 def enqueue(conn, row_id, kind, target, doc):
     generation = doc.get("generation", 0) + 1
     doc["generation"] = generation
-    conn.execute(jobs.insert().values(id=uid(), request_id=row_id, kind=kind, target=target,
+    identifier = uid()
+    conn.execute(jobs.insert().values(id=identifier, request_id=row_id, kind=kind, target=target,
                                      generation=generation, attempt=0, state="queued"))
+    event("ai.job_queued", job_id=identifier, procurement_id=row_id, kind=kind, generation=generation)
 
 
 def public(doc):
