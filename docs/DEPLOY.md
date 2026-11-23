@@ -13,7 +13,7 @@
 ```sh
 umask 077
 docker compose exec -T postgres pg_dump -U nebula -Fc nebula > nebula.dump
-docker compose run --rm --no-deps --entrypoint tar backend -C /data/files -cf - . > files.tar
+docker compose run --rm -T --no-deps --entrypoint tar backend -C /data/files -cf - . > files.tar
 docker compose start backend
 ```
 

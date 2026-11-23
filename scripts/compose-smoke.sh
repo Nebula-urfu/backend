@@ -4,11 +4,14 @@ set -euo pipefail
 export COMPOSE_PROJECT_NAME="nebula-smoke-$$"
 export POSTGRES_PASSWORD="smoke-$RANDOM-$RANDOM"
 export OPENAI_API_KEY= OPENAI_BASE_URL= SECURE_COOKIES=false
-export HTTP_BIND=127.0.0.1:18080 HTTPS_BIND=127.0.0.1:18443 SITE_ADDRESS=http://localhost
+export HTTP_BIND=127.0.0.1:18080 HTTPS_BIND=127.0.0.1:18443 SITE_ADDRESS=:80
 trap 'docker compose down -v --remove-orphans' EXIT
 docker compose up -d --wait --pull missing
 docker compose exec -T backend python -m scripts.seed_smoke
 curl -fsS http://localhost:18080/login >/dev/null
+if [[ -n ${BROWSER_SMOKE_COMMAND:-} ]]; then
+  bash -ec "$BROWSER_SMOKE_COMMAND"
+fi
 id=$(docker compose exec -T backend python -c 'from urllib.request import urlopen; assert urlopen("http://proxy/healthz").status == 200' &&
     docker compose exec -T -e SMOKE_BASE=http://proxy backend python -m scripts.scenario)
 docker compose restart backend postgres
