@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Generic, Literal, TypeVar
 
@@ -52,6 +54,7 @@ class RequestDetail(RequestSummary):
     photos: list[FileRef]
     author: Actor | None = None
     steps: list[StepInfo] | None = None
+    clarificationQuestions: list[str] | None = None
 
 
 class Triage(BaseModel):
@@ -87,6 +90,8 @@ class Tz(Versioned):
     sections: list[TzSection] = []
     openQuestions: list[TzQuestion] = []
     origin: Literal["AI", "STAFF"] | None = None
+    letter: Letter | None = None
+    triageSummary: TriageInput | None = None
 
 
 class Nmc(Versioned):
@@ -236,3 +241,9 @@ class ProblemView(BaseModel):
     code: str
     title: str
     errors: list[FieldProblem] | None = None
+
+
+class Letter(BaseModel):
+    contractorIds: list[str]
+    subject: str
+    body: str

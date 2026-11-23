@@ -8,7 +8,9 @@ from PIL import Image
 from sqlalchemy import select, update
 
 from app import ai
-from app.db import engine, jobs, requests, uid
+from app.requests import answer_clarifications
+from app.schemas import ResidentAnswers
+from app.db import engine, jobs, requests, stamp, uid, users
 
 
 def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
@@ -17,6 +19,8 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
         "triage": {"urgency": "PLANNED", "workType": "Ремонт", "route": "PLANNED_PROCUREMENT"},
         "scope": "Обследовать протекающий участок кровли.", "volume": "Уточнить площадь повреждения при осмотре.",
         "schedule": "Срок согласовать после обследования.", "acceptance": "Проверить герметичность отремонтированной кровли.",
+        "questions": ["Когда появляется вода?"], "contractorNumbers": [1, 2, 3],
+        "letterSubject": "Запрос КП на ремонт кровли", "letterBody": "Просим оценить ремонт кровли и указать срок, цену и гарантию.",
     }
 
     class Provider(BaseHTTPRequestHandler):
@@ -42,7 +46,9 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
     with engine.begin() as conn:
         conn.execute(requests.insert().values(id=rid, org="pilot", author="resident", key=rid,
             fingerprint=rid, data={"description": "Течь", "photos": [{"fileId": "photo"}],
-            "triage": {"state": "PROCESSING", "generation": 1}, "tz": {"version": 0}}))
+            "address": "Учебный адрес", "entrance": "1", "createdAt": stamp(), "updatedAt": stamp(), "status": "ACCEPTED",
+            "nmc": {"state": "NOT_STARTED"}, "tender": {"state": "NOT_STARTED"}, "package": {"state": "NOT_STARTED"},
+            "triage": {"state": "PROCESSING", "generation": 1}, "tz": {"version": 0, "state": "NOT_STARTED"}}))
         conn.execute(jobs.insert().values(id=jid, request_id=rid, kind="triage", target="", generation=1,
                                          state="running", attempt=1))
     try:
@@ -52,6 +58,9 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
             data = conn.execute(select(requests.c.data).where(requests.c.id == rid)).scalar_one()
             assert data["triage"]["state"] == "DRAFT_READY"
             assert data["tz"]["origin"] == "AI"
+            assert data["intake"] == {"pending": True, "questions": ["Когда появляется вода?"]}
+            assert len(data["tz"]["letter"]["contractorIds"]) == 3
+            assert data["tz"]["letter"]["subject"] == "Запрос КП на ремонт кровли"
             assert conn.execute(select(jobs.c.attempt).where(jobs.c.id == jid)).scalar_one() == 2
         path, payload = received[0]
         assert path == "/v1/chat/completions"
@@ -62,6 +71,17 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
             conn.execute(update(jobs).where(jobs.c.id == jid).values(state="queued"))
         assert ai.process_one()
         assert len(received) == 1
+        with engine.begin() as conn:
+            resident = conn.execute(select(users).where(users.c.id == "resident")).one()
+            response = answer_clarifications(rid, ResidentAnswers(answers=["После сильного дождя"]), resident, conn)
+            assert "clarificationQuestions" not in response
+        assert ai.process_one()
+        assert "После сильного дождя" in received[-1][1]["messages"][1]["content"][-1]["text"]
+        with engine.begin() as conn:
+            data = conn.execute(select(requests.c.data).where(requests.c.id == rid)).scalar_one()
+            assert not data["intake"]["pending"]
+            assert data["tz"]["version"] == 2
+            assert data["tz"]["openQuestions"][0]["answer"] == "После сильного дождя"
     finally:
         provider.shutdown()
         thread.join()

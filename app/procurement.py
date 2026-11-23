@@ -9,7 +9,7 @@ from .db import contractors, files, stamp, uid
 from .documents import generate
 from .errors import invalid, missing, require, version
 from .requests import AI_ENABLED, actor, attach, enqueue, find, page, public, read, save, state
-from .schemas import CalculationInput, QuoteEdit, QuoteInput, Recipients, WinnerInput
+from .schemas import CalculationInput, LetterInput, QuoteEdit, QuoteInput, Recipients, WinnerInput
 from . import views
 
 router = APIRouter(tags=["procurement"])
@@ -24,7 +24,7 @@ def directory(conn, user):
 
 @router.get("/contractors", response_model=views.Page[views.Contractor])
 def list_contractors(user: User, conn: Conn):
-    allow(user, "STAFF")
+    allow(user, "STAFF", "REVIEWER")
     return page(sorted(directory(conn, user).values(), key=lambda c: c["name"]))
 
 
@@ -33,6 +33,21 @@ def staff_request(ident, user, conn):
     return find(conn, user, ident, True)
 
 
+@router.put("/requests/{ident}/quote-letter", response_model=views.Tz, response_model_exclude_unset=True)
+def edit_letter(ident: str, body: LetterInput, user: User, conn: Conn):
+    row = staff_request(ident, user, conn)
+    tz = row.data["tz"]
+    version(tz["version"], body.baseVersion)
+    require(tz["state"] in ("DRAFT_READY", "NEEDS_REWORK"))
+    if any(i not in directory(conn, user) for i in body.contractorIds):
+        raise missing()
+    letter = body.model_dump(exclude={"baseVersion"})
+    tz["letter"] = letter
+    tz["version"] += 1
+    state(tz, "DRAFT_READY")
+    save(conn, row)
+    return tz
+
 @router.post("/requests/{ident}/quote-requests", status_code=201, response_model=views.DraftRequest)
 def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
@@ -40,10 +55,11 @@ def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
     records = directory(conn, user)
     if any(i not in records for i in body.contractorIds):
         raise missing()
+    letter = row.data["tz"].get("letter") or {}
     return dict(id=uid(), recipients=[
         {"contractorId": i, "name": records[i]["name"], "email": records[i]["email"]} for i in dict.fromkeys(body.contractorIds)
-    ], subject="Запрос коммерческого предложения",
-        body="Просим указать полную стоимость работ по приложенному ТЗ, сроки и гарантию.",
+    ], subject=letter.get("subject", "Запрос коммерческого предложения"),
+        body=letter.get("body", "Просим указать полную стоимость работ по приложенному ТЗ, сроки и гарантию."),
         attachments=generate(conn, user, row, row.data["tz"]["version"]))
 
 

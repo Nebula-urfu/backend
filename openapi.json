@@ -556,6 +556,16 @@
             "title": "Comment",
             "type": "string"
           },
+          "corrections": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewCorrections"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "subjectVersion": {
             "minimum": 1.0,
             "title": "Subjectversion",
@@ -761,6 +771,72 @@
           "decidedAt"
         ],
         "title": "JournalEntry",
+        "type": "object"
+      },
+      "Letter": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "contractorIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Contractorids",
+            "type": "array"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractorIds",
+          "subject",
+          "body"
+        ],
+        "title": "Letter",
+        "type": "object"
+      },
+      "LetterInput": {
+        "properties": {
+          "baseVersion": {
+            "minimum": 1.0,
+            "title": "Baseversion",
+            "type": "integer"
+          },
+          "body": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "contractorIds": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Contractorids",
+            "type": "array"
+          },
+          "subject": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractorIds",
+          "baseVersion",
+          "subject",
+          "body"
+        ],
+        "title": "LetterInput",
         "type": "object"
       },
       "Money-Input": {
@@ -1624,6 +1700,20 @@
               }
             ]
           },
+          "clarificationQuestions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clarificationquestions"
+          },
           "createdAt": {
             "format": "date-time",
             "title": "Createdat",
@@ -1888,6 +1978,60 @@
           "updatedAt"
         ],
         "title": "RequestSummary",
+        "type": "object"
+      },
+      "ResidentAnswers": {
+        "properties": {
+          "answers": {
+            "items": {
+              "maxLength": 6000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Answers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "answers"
+        ],
+        "title": "ResidentAnswers",
+        "type": "object"
+      },
+      "ReviewCorrections": {
+        "properties": {
+          "letter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LetterInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            },
+            "maxItems": 20,
+            "title": "Sections",
+            "type": "array"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ReviewCorrections",
         "type": "object"
       },
       "Section": {
@@ -2171,6 +2315,16 @@
             ],
             "title": "Lastreviewcomment"
           },
+          "letter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Letter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "openQuestions": {
             "default": [],
             "items": {
@@ -2214,6 +2368,16 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "triageSummary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "updatedAt": {
             "anyOf": [
@@ -3429,6 +3593,108 @@
         ]
       }
     },
+    "/api/v1/requests/{ident}/clarifications": {
+      "post": {
+        "operationId": "answer_clarifications_api_v1_requests__ident__clarifications_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ident",
+            "required": true,
+            "schema": {
+              "title": "Ident",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResidentAnswers"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Answer Clarifications",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
     "/api/v1/requests/{ident}/nmc": {
       "get": {
         "operationId": "nmc_api_v1_requests__ident__nmc_get",
@@ -3818,6 +4084,108 @@
         "summary": "Package Zip",
         "tags": [
           "files"
+        ]
+      }
+    },
+    "/api/v1/requests/{ident}/quote-letter": {
+      "put": {
+        "operationId": "edit_letter_api_v1_requests__ident__quote_letter_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ident",
+            "required": true,
+            "schema": {
+              "title": "Ident",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LetterInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tz"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Edit Letter",
+        "tags": [
+          "procurement"
         ]
       }
     },

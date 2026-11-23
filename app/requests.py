@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from .auth import Conn, User, allow
 from .db import files, jobs, requests, stamp, uid
 from .errors import invalid, missing, require, version
-from .schemas import RequestInput, TriageInput, TzInput
+from .schemas import RequestInput, ResidentAnswers, TriageInput, TzInput
 from . import views
 
 router = APIRouter(tags=["requests"])
@@ -61,6 +61,8 @@ def summary(row, resident, detail=False):
     result.update(id=row.id, status=d["status"], photoId=d["photos"][0]["fileId"])
     if detail:
         result["photos"] = d["photos"]
+        if resident and d.get("intake", {}).get("pending"):
+            result["clarificationQuestions"] = d["intake"]["questions"]
     if not resident:
         triage = d["triage"]["confirmed"] or d["triage"]["proposal"]
         result.update(urgency=triage and triage["urgency"], currentStep=STEPS[step], currentStepState=docs[step]["state"])
@@ -163,6 +165,8 @@ def confirm(ident: str, body: TriageInput, user: User, conn: Conn):
     d = row.data
     require(d["triage"]["state"] != "APPROVED")
     confirmed = body.model_dump()
+    if d.get("intake"):
+        d["intake"]["pending"] = False
     d["triage"].update(confirmed=confirmed, confirmedBy=actor(user), confirmedAt=stamp())
     state(d["triage"], "APPROVED")
     tz = d["tz"]
@@ -221,3 +225,19 @@ def restart(ident: str, step: Literal["TRIAGE", "TZ", "QUOTES_NMC", "TENDER", "P
             enqueue(conn, row.id, "quote", quote["id"], quote)
     save(conn, row)
     return {"status": "queued"}
+
+
+@router.post("/requests/{ident}/clarifications", response_model=views.RequestDetail, response_model_exclude_unset=True)
+def answer_clarifications(ident: str, body: ResidentAnswers, user: User, conn: Conn):
+    allow(user, "RESIDENT")
+    row = find(conn, user, ident, True)
+    d = row.data
+    intake = d.get("intake", {})
+    require(intake.get("pending", False) and d["triage"]["state"] != "APPROVED")
+    if len(body.answers) != len(intake["questions"]):
+        raise invalid("Ответьте на все вопросы или укажите, что ответ неизвестен")
+    intake.update(pending=False, answers=body.answers)
+    state(d["triage"], "PROCESSING")
+    enqueue(conn, row.id, "triage", "", d["triage"])
+    save(conn, row)
+    return summary(row, True, True)

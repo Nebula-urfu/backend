@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select, update
 
 from .auth import Conn, User, allow
-from .db import approvals, stamp, uid
+from .db import approvals, contractors, stamp, uid
 from .errors import invalid, missing, require, version
 from .requests import actor, find, page, save, state
 from .schemas import DecisionInput, VersionInput
@@ -25,10 +25,13 @@ def submit(ident: str, kind: Literal["tz", "nmc", "package"], body: VersionInput
     if kind == "nmc":
         require("amount" in doc)
     if kind == "tz":
+        require(row.data["triage"]["state"] == "APPROVED")
         if any(s["text"] == "Уточнить сотруднику УК" for s in doc["sections"]):
             raise invalid("Заполните все разделы ТЗ")
     state(doc, "IN_REVIEW")
     triage = row.data["triage"]["confirmed"]
+    if kind == "tz":
+        doc["triageSummary"] = triage
     approval = dict(id=uid(), requestId=ident, subjectType=KINDS[kind], subjectVersion=body.version,
                     state="PENDING", urgency=triage["urgency"], address=row.data["address"],
                     submittedBy=actor(user), submittedAt=stamp(), subject=deepcopy(doc))
@@ -79,6 +82,24 @@ def detail(ident: str, user: User, conn: Conn):
     ]))
 
 
+def apply_corrections(conn, row, doc, edits):
+    sections = {entry["id"]: entry for entry in doc["sections"]}
+    for patch in edits.sections:
+        if patch.id not in sections:
+            raise invalid("Неизвестный раздел")
+        sections[patch.id].update(text=patch.text, editedByStaff=True)
+    if edits.letter:
+        version(doc["version"], edits.letter.baseVersion)
+        known = set(conn.execute(select(contractors.c.id).where(contractors.c.org == row.org)).scalars())
+        if not set(edits.letter.contractorIds) <= known:
+            raise missing()
+        doc["letter"] = edits.letter.model_dump(exclude={"baseVersion"})
+    if edits.triage:
+        row.data["triage"]["confirmed"] = edits.triage.model_dump()
+        doc["triageSummary"] = row.data["triage"]["confirmed"]
+    doc.update(version=doc["version"] + 1, origin="STAFF")
+
+
 @router.post("/approvals/{ident}/{action}", response_model=views.Approval)
 def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput, user: User, conn: Conn):
     allow(user, "REVIEWER")
@@ -92,6 +113,9 @@ def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput
     if action == "reject" and not comment:
         raise invalid("Укажите причину возврата")
     passed = action == "approve"
+    if body.corrections:
+        require(not passed and approval.kind == "tz")
+        apply_corrections(conn, row, doc, body.corrections)
     state(doc, "APPROVED" if passed else "NEEDS_REWORK")
     if not passed:
         doc["lastReviewComment"] = comment

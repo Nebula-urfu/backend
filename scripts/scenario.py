@@ -62,7 +62,10 @@ def run():
 
     approval = submit("tz", tz["version"])
     call(reviewer, "POST", approval + "/reject", 400, json={"subjectVersion": tz["version"], "comment": " "})
-    call(reviewer, "POST", approval + "/reject", json={"subjectVersion": tz["version"], "comment": "Уточнить приёмку"})
+    call(reviewer, "POST", approval + "/reject", json={"subjectVersion": tz["version"], "comment": "Уточнить приёмку",
+        "corrections": {"sections": [{"id": "acceptance", "text": "Проверить отсутствие протечек."}]}})
+    tz = call(staff, "GET", p + "/tz").json()
+    assert next(s for s in tz["sections"] if s["id"] == "acceptance")["text"] == "Проверить отсутствие протечек."
     tz = call(staff, "PUT", p + "/tz", json=dict(baseVersion=tz["version"], sections=sections)).json()
     call(reviewer, "POST", approval + "/approve", 409, json={"subjectVersion": tz["version"] - 1})
     approval = submit("tz", tz["version"])
