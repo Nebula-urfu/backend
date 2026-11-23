@@ -1,0 +1,51 @@
+# Помощник УК по закупкам · API
+
+Точка запуска всего MVP находится здесь. Для локальной сборки разместите репозитории в соседних каталогах `backend` и `frontend`.
+
+```sh
+cp .env.example .env
+# Задайте POSTGRES_PASSWORD случайной hex-строкой, например из openssl rand -hex 32.
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose up -d --wait
+docker compose exec backend python -m app.cli org pilot "Пилотная УК"
+docker compose exec backend python -m app.cli user pilot RESIDENT resident "Житель" --address "Пилотная улица, 1"
+docker compose exec backend python -m app.cli user pilot STAFF staff "Сотрудник"
+docker compose exec backend python -m app.cli user pilot REVIEWER reviewer "Проверяющий"
+docker compose exec backend python -m app.cli contractor pilot "Подрядчик 1" offer1@example.org
+docker compose exec backend python -m app.cli contractor pilot "Подрядчик 2" offer2@example.org
+docker compose exec backend python -m app.cli contractor pilot "Подрядчик 3" offer3@example.org
+curl -fsS http://localhost:8080/healthz
+```
+
+Войдите через `http://localhost:8080/login`. CLI запросит отдельный пароль для каждого аккаунта. Для автоматизации используйте `--password-stdin`.
+
+## Nix и разработка
+
+```sh
+nix develop
+uv sync --locked
+# DATABASE_URL указывает на PostgreSQL, для разработки по умолчанию используется локальная база nebula.
+export SECURE_COOKIES=false
+uv run alembic upgrade head
+uv run uvicorn app.main:app --port 8000
+```
+
+`nix flake check` проверяет исходники и форматы файлов. `nix develop --command scripts/test-postgres.sh` запускает миграции в обе стороны на одноразовой БД, HTTP-сценарий и тест локального провайдера. Экспорт контракта — `PYTHONPATH=. uv run --locked python scripts/export_openapi.py > openapi.json`.
+
+Общий smoke-тест использует два локальных тега или подготовленных образа. Он запускает отдельный Compose-проект с одноразовыми томами, проходит сценарий через прокси и проверяет сохранность заявки и ZIP после перезапуска.
+
+```sh
+BACKEND_IMAGE=nebula-backend:0.1.0 FRONTEND_IMAGE=nebula-frontend:0.1.0 scripts/compose-smoke.sh
+```
+
+## Модель и расчёт НМЦ
+
+Для предоставленной llama.cpp в окружении FastAPI задайте `OPENAI_BASE_URL=http://172.16.34.8:8080/v1` и `OPENAI_MODEL=qwen3.5-9b`. `OPENAI_API_KEY` задаётся при наличии авторизации. С пустым ключом и заданным URL SDK использует локальное значение заголовка Bearer. Для ручной работы оставьте и ключ, и URL пустыми.
+
+Триаж и ТЗ используют описание и до трёх уменьшенных JPEG без EXIF, переданных через `image_url`. Профиль, адрес, логин и идентификаторы заявки модели не передаются. Из описания и извлечённого текста убираются совпадения с шаблонами телефонов и email. Перед загрузкой исключайте из кадров лица и персональные сведения, если они не нужны для работы. Обращение к адресу llama.cpp по HTTP предполагает доверенную частную сеть между FastAPI и провайдером.
+
+Извлечение КП поддерживает UTF-8 TXT и текстовые PDF до 20 страниц. Для сканированных PDF, DOCX, XLSX и изображений КП доступен ручной ввод. Оригиналы форматов JPEG, PNG, WebP, PDF, UTF-8 TXT, DOCX, XLSX можно приложить к КП. Максимум пять файлов по 10 МиБ. Задачи сохраняются в PostgreSQL. Вызов SDK ограничен таймаутом 35 секунд и тремя попытками. Запустите один процесс FastAPI с одним worker приложения.
+
+НМЦ — среднее арифметическое полных сопоставимых цен в RUB от разных подрядчиков с округлением до копейки методом half-up. Сотрудник проверяет одинаковый объём, состав работ, условия и налоговую базу и подтверждает поля каждого сопоставимого предложения. В API можно явно указать `quoteIds`. Минимум задаёт `MIN_QUOTES`, по умолчанию три. Расчёт хранит снимок версий КП, цены, метод и допущения. Итоговый пакет использует утверждённые ТЗ и НМЦ. Отправка запроса, выбор победителя и подписание остаются за оператором.
+
+См. [интеграцию HTTP-клиента](docs/API.md) и [деплой и эксплуатацию](docs/DEPLOY.md).

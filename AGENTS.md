@@ -1,0 +1,1 @@
+Keep FastAPI independently deployable and use PostgreSQL/Alembic for persistence. Export OpenAPI when HTTP handlers or schemas change. Tests use disposable databases and a local model simulator. Keep private files and runtime secrets out of Git.

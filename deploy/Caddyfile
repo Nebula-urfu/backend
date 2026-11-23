@@ -1,0 +1,13 @@
+{$SITE_ADDRESS} {
+	header X-Content-Type-Options nosniff
+	@api path /api/* /healthz
+	handle @api {
+		request_body {
+			max_size 11MB
+		}
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
