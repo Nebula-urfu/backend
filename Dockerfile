@@ -5,7 +5,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project --no-cache
 FROM python:3.14.10-slim-bookworm
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends catdoc poppler-utils tesseract-ocr-rus && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends catdoc poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus && rm -rf /var/lib/apt/lists/*
 RUN groupadd -g 10001 nebula && useradd -u 10001 -g nebula nebula && install -d -o nebula -g nebula -m 0700 /data/files
 COPY --from=build /app/.venv /app/.venv
 COPY app app
