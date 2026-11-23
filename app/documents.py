@@ -16,16 +16,15 @@ from .db import STORAGE, files, uid
 from .errors import invalid, missing, require, version as check_version
 from .logging_config import event
 from .requests import find
+from .office_text import MAX_BYTES, OFFICE_MIME, check_zip, verify_office
 from .templates import current, render, variables_for
 
 router = APIRouter(tags=["files"])
 MIME = {
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp",
-    "pdf": "application/pdf", "txt": "text/plain",
-    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    **OFFICE_MIME,
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
-MAX_BYTES = 10 * 1024 * 1024
 
 
 def store(conn, owner, name, media_type, content, request_id=None, purpose=None, version=None):
@@ -47,18 +46,10 @@ def verify(data, ext):
             if image.width * image.height > 25_000_000:
                 raise ValueError()
             image.verify()
-    elif ext == "pdf":
-        if not data.startswith(b"%PDF-"):
-            raise ValueError()
-    elif ext == "txt":
-        if "\x00" in data.decode("utf-8"):
-            raise ValueError()
+    elif ext in OFFICE_MIME:
+        verify_office(data, ext)
     else:
-        with ZipFile(io.BytesIO(data)) as archive:
-            required = "word/document.xml" if ext == "docx" else "xl/workbook.xml"
-            entries = archive.infolist()
-            if len(entries) > 500 or sum(item.file_size for item in entries) > 40_000_000 or required not in archive.namelist():
-                raise ValueError()
+        check_zip(data, "xl/workbook.xml")
 
 
 @router.post("/files", status_code=201, response_model=FileRef)

@@ -29,7 +29,7 @@
         (package: "${package.name}==${package.version}") dependencies);
     in {
       devShells.${system}.default = pkgs.mkShell {
-        packages = [ python pkgs.uv pkgs.postgresql_17 pkgs.curl ];
+        packages = [ python pkgs.uv pkgs.postgresql_17 pkgs.curl pkgs.catdoc pkgs.poppler-utils (pkgs.tesseract.override { enableLanguages = [ "rus" "eng" ]; }) ];
         UV_PYTHON_DOWNLOADS = "never";
       };
       checks.${system}.backend = pkgs.runCommand "nebula-backend-check" {

@@ -55,6 +55,15 @@ try {
   await button(admin, "Сохранить").click()
   assert((await (await addedAccount).json()).roles.length === 3)
   await button(admin, "Шаблоны").click()
+  await admin.route("**/api/v1/admin/templates/import", route => route.fulfill({
+    json: { fields: { letterSubject: "Импортированный шаблон", letterBody: "Учебный черновик." } },
+  }))
+  await admin.getByLabel("Файл шаблона").setInputFiles({
+    name: "template.txt", mimeType: "text/plain", buffer: Buffer.from("Учебный шаблон"),
+  })
+  await button(admin, "Распознать шаблон").click()
+  await admin.getByText("Черновик подставлен в поля.", { exact: false }).waitFor()
+  assert.equal(await admin.getByLabel("Тема письма", { exact: true }).inputValue(), "Импортированный шаблон")
   const subject = admin.getByLabel("Тема письма", { exact: true })
   await subject.fill("Браузерная проверка {{draft_subject}}")
   await button(admin, "Сохранить шаблоны").click()

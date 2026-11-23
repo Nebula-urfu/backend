@@ -1,14 +1,18 @@
+from pathlib import Path
+from typing import Literal
+
 import re
 
-from fastapi import APIRouter
-from pydantic import BaseModel, Field, model_validator
+from fastapi import APIRouter, File, Form, UploadFile
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from .auth import Conn, User, allow
-from .db import templates
-from .errors import version
+from .db import engine, model_usage, now, templates, uid
+from .errors import Problem, invalid, version
 from .logging_config import event
+from .office_text import MAX_BYTES, OFFICE_MIME, verify_office
 
 router = APIRouter(prefix="/admin/templates", tags=["administration"])
 TOKEN = re.compile(r"\{\{\s*([a-z_]+)\s*\}\}")
@@ -32,11 +36,11 @@ DEFAULTS = {
 
 class TemplateFields(BaseModel):
     letterSubject: str = Field(min_length=1, max_length=250)
-    letterBody: str = Field(min_length=1, max_length=4000)
-    specIntro: str = Field(min_length=1, max_length=4000)
-    quoteFormIntro: str = Field(min_length=1, max_length=4000)
-    contractTerms: str = Field(min_length=1, max_length=4000)
-    protocolIntro: str = Field(min_length=1, max_length=4000)
+    letterBody: str = Field(min_length=1, max_length=12000)
+    specIntro: str = Field(min_length=1, max_length=12000)
+    quoteFormIntro: str = Field(min_length=1, max_length=12000)
+    contractTerms: str = Field(min_length=1, max_length=12000)
+    protocolIntro: str = Field(min_length=1, max_length=12000)
 
     @model_validator(mode="after")
     def valid_variables(self):
@@ -105,3 +109,70 @@ def variables_for(row):
 
 def render(text, values):
     return TOKEN.sub(lambda match: str(values.get(match[1], "")), text)
+
+
+TemplateKind = Literal["letter", "spec", "quote_form", "contract", "protocol"]
+IMPORT_FIELDS = {
+    "letter": "letterBody",
+    "spec": "specIntro",
+    "quote_form": "quoteFormIntro",
+    "contract": "contractTerms",
+    "protocol": "protocolIntro",
+}
+IMPORT_LABEL = {
+    "letter": "тема и текст письма запроса коммерческого предложения",
+    "spec": "вступительный блок технического задания",
+    "quote_form": "указания по заполнению формы КП",
+    "contract": "условия проекта договора",
+    "protocol": "вступление и примечания к протоколу оценки",
+}
+
+
+class ImportedDraft(BaseModel):
+    text: str = Field(min_length=1, max_length=12000)
+    subject: str | None = Field(default=None, max_length=250)
+
+
+class ImportedTemplate(BaseModel):
+    fields: dict[str, str]
+
+
+@router.post("/import", response_model=ImportedTemplate)
+def import_document(user: User, kind: TemplateKind = Form(), file: UploadFile = File()):
+    from .ai import import_template_draft, office_inputs
+    from .requests import AI_ENABLED
+
+    allow(user, "ADMIN")
+    if not AI_ENABLED:
+        raise Problem(503, "AI_UNAVAILABLE", "Распознавание шаблонов требует доступной модели")
+    ext = Path(file.filename or "").suffix.lower().lstrip(".")
+    if ext not in OFFICE_MIME:
+        raise invalid("Выберите PDF, DOCX, DOC, ODT или TXT")
+    content = file.file.read(MAX_BYTES + 1)
+    if not 0 < len(content) <= MAX_BYTES:
+        raise invalid("Размер файла должен быть от 1 байта до 10 МиБ")
+    try:
+        verify_office(content, ext)
+        inputs = office_inputs([(content, OFFICE_MIME[ext])])
+    except Exception as exc:
+        raise invalid("Не удалось прочитать документ. Проверьте формат, размер и количество страниц") from exc
+    if not inputs:
+        raise invalid("В документе не найден текст для импорта")
+    field = IMPORT_FIELDS[kind]
+    metrics = {}
+    try:
+        reply = import_template_draft(IMPORT_LABEL[kind], sorted(ALLOWED[field]), inputs, metrics)
+        fields = {field: reply["text"]}
+        if kind == "letter" and reply.get("subject"):
+            fields["letterSubject"] = reply["subject"]
+        validated = TemplateFields.model_validate({**DEFAULTS, **fields})
+        return {"fields": {key: getattr(validated, key) for key in fields}}
+    except ValidationError as exc:
+        raise invalid("Модель вернула некорректный шаблон. Проверьте документ и повторите импорт") from exc
+    except Exception as exc:
+        raise Problem(503, "AI_UNAVAILABLE", "Модель не смогла распознать шаблон") from exc
+    finally:
+        if metrics:
+            with engine.begin() as conn:
+                conn.execute(model_usage.insert().values(
+                    id=uid(), org=user.org, kind="template_import", recorded_at=now(), **metrics))
