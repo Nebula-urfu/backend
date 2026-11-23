@@ -2,6 +2,8 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import pytest
+from pydantic import ValidationError
 from PIL import Image
 from sqlalchemy import select, update
 
@@ -13,7 +15,8 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
     received = []
     answer = {
         "triage": {"urgency": "PLANNED", "workType": "Ремонт", "route": "PLANNED_PROCUREMENT"},
-        "scope": "Кровля", "volume": "30 м²", "schedule": "10 дней", "acceptance": "Акт",
+        "scope": "Обследовать протекающий участок кровли.", "volume": "Уточнить площадь повреждения при осмотре.",
+        "schedule": "Срок согласовать после обследования.", "acceptance": "Проверить герметичность отремонтированной кровли.",
     }
 
     class Provider(BaseHTTPRequestHandler):
@@ -115,3 +118,12 @@ def test_manual_quote_edit_wins_over_inflight_result(monkeypatch):
         data = conn.execute(select(requests.c.data).where(requests.c.id == rid)).scalar_one()
         assert data["quotes"][qid]["data"] == {"contractorName": "Manual"}
         assert conn.execute(select(jobs.c.state).where(jobs.c.id == jid)).scalar_one() == "obsolete"
+
+
+def test_rejects_placeholder_draft():
+    with pytest.raises(ValidationError) as error:
+        ai.Draft.model_validate({
+            "triage": {"urgency": "PLANNED", "workType": "DIAGNOSTIC", "route": "PLANNED_PROCUREMENT"},
+            "scope": "DIAGNOSTIC", "volume": "UNKNOWN", "schedule": "UNKNOWN", "acceptance": "UNKNOWN",
+        })
+    assert len(error.value.errors()) == 5
