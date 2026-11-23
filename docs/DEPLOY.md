@@ -41,3 +41,12 @@ docker compose logs --since=1h backend | rg 'ai\.|workflow\.|file\.'
 ```
 
 Эти события относятся к вызовам llama.cpp из backend. Внутренний журнал процесса llama.cpp находится на сервере модели. В событиях backend сохраняются служебные данные вызова. Тексты промптов, ответов модели, вложения и секреты туда не попадают.
+
+### Режим dev
+
+`LOG_FORMAT=dev` выводит одну компактную строку на событие. В строке видны время UTC, цветной уровень, название события и диагностические поля. `LOG_COLOR=always` сохраняет ANSI-цвета при просмотре журналов Docker, `auto` включает их только при записи в терминал, `never` отключает. По умолчанию сервер пишет JSON. Формат и уровень настраиваются независимо.
+
+```sh
+LOG_FORMAT=dev LOG_COLOR=always docker compose up -d --no-deps backend
+docker compose logs -f --no-log-prefix --tail=150 backend
+```
