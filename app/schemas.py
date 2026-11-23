@@ -108,3 +108,11 @@ class ReviewCorrections(BaseModel):
     sections: list[Section] = Field(default_factory=list, max_length=20)
     letter: LetterInput | None = None
     triage: TriageInput | None = None
+
+
+class DescriptionDraftInput(BaseModel):
+    photoFileIds: list[Short] = Field(min_length=1, max_length=3)
+
+
+class DescriptionDraftResponse(BaseModel):
+    description: str

@@ -67,12 +67,17 @@ try {
   const staff = await login('staff')
   const reviewer = await login('reviewer')
   await resident.goto(root + '/requests/new')
+  await resident.route("**/api/v1/requests/description-draft", route => route.fulfill({
+    json: { description: "На потолке видны следы протечки." },
+  }))
   await resident.getByTestId('photos').setInputFiles({ name: 'roof.png', mimeType: 'image/png', buffer: png })
+  await resident.waitForFunction(() => document.querySelector("#description")?.value === "На потолке видны следы протечки.")
   await resident.locator('#description').fill('Протечка крыши, браузерный сценарий')
   await resident.locator('#entrance').fill('2')
   const created = waitApi(resident, '/api/v1/requests', 'POST', 201)
   await button(resident, 'Отправить заявку').click()
   const request = await (await created).json()
+  assert(request.description === "Протечка крыши, браузерный сценарий")
   const path = root + '/requests/' + request.id
 
   await staff.goto(path)

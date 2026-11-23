@@ -9,8 +9,8 @@ from sqlalchemy.dialects.postgresql import insert
 
 from .auth import Conn, User, allow
 from .db import files, jobs, requests, stamp, uid
-from .errors import invalid, missing, require, version
-from .schemas import RequestInput, ResidentAnswers, TriageInput, TzInput
+from .errors import Problem, invalid, missing, require, version
+from .schemas import DescriptionDraftInput, DescriptionDraftResponse, RequestInput, ResidentAnswers, TriageInput, TzInput
 from . import views
 
 router = APIRouter(tags=["requests"])
@@ -296,3 +296,54 @@ def enable_automation(ident: str, user: User, conn: Conn):
         advance(conn, row)
         save(conn, row)
     return summary(row, False, True)
+
+
+@router.post("/requests/description-draft", response_model=DescriptionDraftResponse, responses={503: {"description": "AI unavailable"}})
+def describe_photos(body: DescriptionDraftInput, user: User):
+    from datetime import timedelta
+    from types import SimpleNamespace
+
+    from sqlalchemy import case
+
+    from . import ai
+    from .db import attempts, engine, model_usage, now
+
+    allow(user, "RESIDENT")
+    if not AI_ENABLED:
+        raise Problem(503, "AI_UNAVAILABLE", "Описание можно заполнить вручную")
+    ids = body.photoFileIds
+    if len(set(ids)) != len(ids):
+        raise invalid("Фотографии должны быть уникальны")
+    with engine.begin() as conn:
+        rows = conn.execute(select(files).where(
+            files.c.id.in_(ids), files.c.owner == user.id, files.c.request_id.is_(None)
+        )).all()
+        if len(rows) != len(ids):
+            raise missing()
+        if any(r.data["mediaType"] not in ("image/jpeg", "image/png", "image/webp") for r in rows):
+            raise invalid("Неподдерживаемый формат фотографии")
+        current = now()
+        until = current + timedelta(minutes=1)
+        expired = attempts.c.expires <= current
+        key = "description:" + user.id
+        count = conn.execute(insert(attempts).values(id=key, count=1, expires=until).on_conflict_do_update(
+            index_elements=["id"], set_={
+                "count": case((expired, 1), else_=attempts.c.count + 1),
+                "expires": case((expired, until), else_=attempts.c.expires),
+            },
+        ).returning(attempts.c.count)).scalar_one()
+        if count > 6:
+            raise Problem(429, "RATE_LIMIT", "Подождите минуту или заполните описание вручную")
+        photos = {row.id: row.data for row in rows}
+    metrics = {}
+    try:
+        return ai.inference(SimpleNamespace(kind="description"), {
+            "photos": [photos[i] for i in ids], "_metrics": metrics,
+        })
+    except Exception as exc:
+        raise Problem(503, "AI_UNAVAILABLE", "Не удалось составить описание. Попробуйте ещё раз или заполните поле вручную") from exc
+    finally:
+        if metrics:
+            with engine.begin() as conn:
+                conn.execute(model_usage.insert().values(
+                    id=uid(), org=user.org, kind="description", recorded_at=now(), **metrics))
