@@ -1,6 +1,5 @@
 import asyncio
 from contextlib import asynccontextmanager, suppress
-from typing import Literal
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,6 +10,7 @@ from . import approvals, auth, documents, procurement, requests
 from .ai import worker
 from .auth import Conn
 from .errors import Problem
+from .views import ProblemView
 
 
 @asynccontextmanager
@@ -55,4 +55,28 @@ def health(conn: Conn):
 
 
 for router in (auth.router, requests.router, documents.router, procurement.router, approvals.router):
-    app.include_router(router, prefix="/api/v1")
+    app.include_router(router, prefix="/api/v1", responses={
+        code: {"model": ProblemView, "description": title, "content": {"application/problem+json": {}}}
+        for code, title in {400: "Invalid input", 401: "Authentication required", 403: "Forbidden",
+                            404: "Not found", 409: "Conflict", 429: "Too many login attempts"}.items()
+    })
+
+
+def export_openapi():
+    from fastapi.openapi.utils import get_openapi
+
+    if app.openapi_schema is None:
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        for path in schema["paths"].values():
+            for operation in path.values():
+                responses = operation.get("responses", {})
+                responses.pop("422", None)
+                for response in responses.values():
+                    content = response.get("content", {})
+                    if "application/problem+json" in content and "application/json" in content:
+                        content["application/problem+json"] = content.pop("application/json")
+        app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = export_openapi

@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "Actor": {
+        "properties": {
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName"
+        ],
+        "title": "Actor",
+        "type": "object"
+      },
       "Answer": {
         "properties": {
           "answer": {
@@ -20,6 +38,229 @@
           "answer"
         ],
         "title": "Answer",
+        "type": "object"
+      },
+      "Approval": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decidedBy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subjectType": {
+            "enum": [
+              "TZ",
+              "NMC",
+              "PACKAGE"
+            ],
+            "title": "Subjecttype",
+            "type": "string"
+          },
+          "subjectVersion": {
+            "title": "Subjectversion",
+            "type": "integer"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "title": "Submittedat",
+            "type": "string"
+          },
+          "submittedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "urgency": {
+            "enum": [
+              "EMERGENCY",
+              "PLANNED"
+            ],
+            "title": "Urgency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "subjectType",
+          "subjectVersion",
+          "state",
+          "urgency",
+          "address",
+          "submittedBy",
+          "submittedAt"
+        ],
+        "title": "Approval",
+        "type": "object"
+      },
+      "ApprovalDetail": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decidedBy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "previousDecisions": {
+            "items": {
+              "$ref": "#/components/schemas/JournalEntry"
+            },
+            "title": "Previousdecisions",
+            "type": "array"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tz"
+              },
+              {
+                "$ref": "#/components/schemas/Nmc"
+              },
+              {
+                "$ref": "#/components/schemas/Package"
+              }
+            ],
+            "title": "Subject"
+          },
+          "subjectType": {
+            "enum": [
+              "TZ",
+              "NMC",
+              "PACKAGE"
+            ],
+            "title": "Subjecttype",
+            "type": "string"
+          },
+          "subjectVersion": {
+            "title": "Subjectversion",
+            "type": "integer"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "title": "Submittedat",
+            "type": "string"
+          },
+          "submittedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "urgency": {
+            "enum": [
+              "EMERGENCY",
+              "PLANNED"
+            ],
+            "title": "Urgency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "subjectType",
+          "subjectVersion",
+          "state",
+          "urgency",
+          "address",
+          "submittedBy",
+          "submittedAt",
+          "subject",
+          "previousDecisions"
+        ],
+        "title": "ApprovalDetail",
         "type": "object"
       },
       "Body_upload_api_v1_files_post": {
@@ -57,6 +298,232 @@
           }
         },
         "title": "CalculationInput",
+        "type": "object"
+      },
+      "Comparison": {
+        "properties": {
+          "discrepancies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Discrepancies",
+            "type": "array"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "quotes",
+          "rows",
+          "discrepancies"
+        ],
+        "title": "Comparison",
+        "type": "object"
+      },
+      "ComparisonCell": {
+        "properties": {
+          "flag": {
+            "enum": [
+              "NONE",
+              "MISSING",
+              "MISMATCH",
+              "OUTLIER"
+            ],
+            "title": "Flag",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "string"
+          },
+          "unitPrice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "quoteId",
+          "flag"
+        ],
+        "title": "ComparisonCell",
+        "type": "object"
+      },
+      "ComparisonQuote": {
+        "properties": {
+          "contractorName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contractorname"
+          },
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "string"
+          },
+          "termsDays": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termsdays"
+          },
+          "totalPrice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warranty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warranty"
+          }
+        },
+        "required": [
+          "quoteId",
+          "contractorName",
+          "totalPrice",
+          "termsDays",
+          "warranty"
+        ],
+        "title": "ComparisonQuote",
+        "type": "object"
+      },
+      "ComparisonRow": {
+        "properties": {
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonCell"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "name",
+          "unit",
+          "quantity",
+          "cells"
+        ],
+        "title": "ComparisonRow",
+        "type": "object"
+      },
+      "Contract": {
+        "properties": {
+          "type": {
+            "enum": [
+              "STANDARD",
+              "NON_STANDARD"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Contract",
+        "type": "object"
+      },
+      "Contractor": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nonstandardContract": {
+            "title": "Nonstandardcontract",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "nonstandardContract"
+        ],
+        "title": "Contractor",
         "type": "object"
       },
       "Credentials": {
@@ -101,6 +568,125 @@
         "title": "DecisionInput",
         "type": "object"
       },
+      "Document": {
+        "properties": {
+          "fileId": {
+            "title": "Fileid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "TZ",
+              "QUOTE_FORM",
+              "CONTRACT",
+              "EVALUATION_PROTOCOL"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "fileId",
+          "name",
+          "version"
+        ],
+        "title": "Document",
+        "type": "object"
+      },
+      "DraftRequest": {
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/FileRef"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "title": "Recipients",
+            "type": "array"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipients",
+          "subject",
+          "body",
+          "attachments"
+        ],
+        "title": "DraftRequest",
+        "type": "object"
+      },
+      "FieldProblem": {
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "FieldProblem",
+        "type": "object"
+      },
+      "FileRef": {
+        "properties": {
+          "fileId": {
+            "title": "Fileid",
+            "type": "string"
+          },
+          "mediaType": {
+            "title": "Mediatype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId",
+          "name",
+          "mediaType",
+          "sizeBytes"
+        ],
+        "title": "FileRef",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -114,7 +700,70 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "Money": {
+      "JournalEntry": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decidedAt": {
+            "format": "date-time",
+            "title": "Decidedat",
+            "type": "string"
+          },
+          "decidedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "decision": {
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "subjectType": {
+            "enum": [
+              "TZ",
+              "NMC",
+              "PACKAGE"
+            ],
+            "title": "Subjecttype",
+            "type": "string"
+          },
+          "subjectVersion": {
+            "title": "Subjectversion",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "subjectType",
+          "subjectVersion",
+          "decision",
+          "decidedBy",
+          "decidedAt"
+        ],
+        "title": "JournalEntry",
+        "type": "object"
+      },
+      "Money-Input": {
         "properties": {
           "amount": {
             "anyOf": [
@@ -141,7 +790,465 @@
         "title": "Money",
         "type": "object"
       },
-      "QuoteData": {
+      "Money-Output": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "const": "RUB",
+            "default": "RUB",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "title": "Money",
+        "type": "object"
+      },
+      "Nmc": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "calculatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculatedat"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "lastReviewComment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastreviewcomment"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "quoteIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoteids"
+          },
+          "quoteVersions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoteversions"
+          },
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "version"
+        ],
+        "title": "Nmc",
+        "type": "object"
+      },
+      "Package": {
+        "properties": {
+          "approvedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvedat"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "lastReviewComment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastreviewcomment"
+          },
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "version",
+          "documents"
+        ],
+        "title": "Package",
+        "type": "object"
+      },
+      "Page_Approval_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Approval"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "Page[Approval]",
+        "type": "object"
+      },
+      "Page_Contractor_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Contractor"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "Page[Contractor]",
+        "type": "object"
+      },
+      "Page_JournalEntry_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JournalEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "Page[JournalEntry]",
+        "type": "object"
+      },
+      "Page_Quote_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Quote"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "Page[Quote]",
+        "type": "object"
+      },
+      "Page_RequestSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RequestSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "Page[RequestSummary]",
+        "type": "object"
+      },
+      "ProblemView": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldProblem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "code",
+          "title"
+        ],
+        "title": "ProblemView",
+        "type": "object"
+      },
+      "Quote": {
+        "properties": {
+          "contractorId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contractorid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteData-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editedByStaff": {
+            "default": false,
+            "title": "Editedbystaff",
+            "type": "boolean"
+          },
+          "extraction": {
+            "enum": [
+              "EXTRACTING",
+              "EXTRACTED",
+              "AI_FAILED"
+            ],
+            "title": "Extraction",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileRef"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "contractorId",
+          "extraction",
+          "version",
+          "files",
+          "data",
+          "createdAt"
+        ],
+        "title": "Quote",
+        "type": "object"
+      },
+      "QuoteData-Input": {
         "properties": {
           "contractorName": {
             "anyOf": [
@@ -168,7 +1275,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/QuoteItem"
+              "$ref": "#/components/schemas/QuoteItem-Input"
             },
             "maxItems": 100,
             "title": "Items",
@@ -190,7 +1297,79 @@
           "totalPrice": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Money"
+                "$ref": "#/components/schemas/Money-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warranty": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warranty"
+          }
+        },
+        "title": "QuoteData",
+        "type": "object"
+      },
+      "QuoteData-Output": {
+        "properties": {
+          "contractorName": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contractorname"
+          },
+          "discrepancies": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Discrepancies",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem-Output"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "termsDays": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termsdays"
+          },
+          "totalPrice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
               },
               {
                 "type": "null"
@@ -221,7 +1400,7 @@
             "type": "integer"
           },
           "data": {
-            "$ref": "#/components/schemas/QuoteData"
+            "$ref": "#/components/schemas/QuoteData-Input"
           }
         },
         "required": [
@@ -264,7 +1443,7 @@
         "title": "QuoteInput",
         "type": "object"
       },
-      "QuoteItem": {
+      "QuoteItem-Input": {
         "properties": {
           "name": {
             "maxLength": 200,
@@ -275,7 +1454,7 @@
           "price": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Money"
+                "$ref": "#/components/schemas/Money-Input"
               },
               {
                 "type": "null"
@@ -313,7 +1492,7 @@
           "unitPrice": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Money"
+                "$ref": "#/components/schemas/Money-Input"
               },
               {
                 "type": "null"
@@ -325,6 +1504,88 @@
           "name"
         ],
         "title": "QuoteItem",
+        "type": "object"
+      },
+      "QuoteItem-Output": {
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "unitPrice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "QuoteItem",
+        "type": "object"
+      },
+      "Recipient": {
+        "properties": {
+          "contractorId": {
+            "title": "Contractorid",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractorId",
+          "name",
+          "email"
+        ],
+        "title": "Recipient",
         "type": "object"
       },
       "Recipients": {
@@ -345,6 +1606,146 @@
           "contractorIds"
         ],
         "title": "Recipients",
+        "type": "object"
+      },
+      "RequestDetail": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currentStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "TRIAGE",
+                  "TZ",
+                  "QUOTES_NMC",
+                  "TENDER",
+                  "PACKAGE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstep"
+          },
+          "currentStepState": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_STARTED",
+                  "PROCESSING",
+                  "DRAFT_READY",
+                  "IN_REVIEW",
+                  "NEEDS_REWORK",
+                  "APPROVED",
+                  "AI_FAILED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstepstate"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "entrance": {
+            "title": "Entrance",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "photoId": {
+            "title": "Photoid",
+            "type": "string"
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/FileRef"
+            },
+            "title": "Photos",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StepInfo"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "EMERGENCY",
+                  "PLANNED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "address",
+          "entrance",
+          "description",
+          "photoId",
+          "createdAt",
+          "updatedAt",
+          "photos"
+        ],
+        "title": "RequestDetail",
         "type": "object"
       },
       "RequestInput": {
@@ -379,6 +1780,114 @@
           "photoFileIds"
         ],
         "title": "RequestInput",
+        "type": "object"
+      },
+      "RequestSummary": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currentStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "TRIAGE",
+                  "TZ",
+                  "QUOTES_NMC",
+                  "TENDER",
+                  "PACKAGE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstep"
+          },
+          "currentStepState": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_STARTED",
+                  "PROCESSING",
+                  "DRAFT_READY",
+                  "IN_REVIEW",
+                  "NEEDS_REWORK",
+                  "APPROVED",
+                  "AI_FAILED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstepstate"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "entrance": {
+            "title": "Entrance",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "photoId": {
+            "title": "Photoid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "EMERGENCY",
+                  "PLANNED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "address",
+          "entrance",
+          "description",
+          "photoId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "RequestSummary",
         "type": "object"
       },
       "Section": {
@@ -441,6 +1950,181 @@
         "title": "SessionProfile",
         "type": "object"
       },
+      "StepInfo": {
+        "properties": {
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "step": {
+            "enum": [
+              "TRIAGE",
+              "TZ",
+              "QUOTES_NMC",
+              "TENDER",
+              "PACKAGE"
+            ],
+            "title": "Step",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "state",
+          "updatedAt"
+        ],
+        "title": "StepInfo",
+        "type": "object"
+      },
+      "Tender": {
+        "properties": {
+          "contract": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Contract"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "selectedWinner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Winner"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "winnerProposal": {
+            "title": "Winnerproposal",
+            "type": "null"
+          }
+        },
+        "required": [
+          "state",
+          "documents",
+          "winnerProposal",
+          "selectedWinner",
+          "contract"
+        ],
+        "title": "Tender",
+        "type": "object"
+      },
+      "Triage": {
+        "properties": {
+          "confirmed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmedat"
+          },
+          "confirmedBy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "state",
+          "proposal",
+          "confirmed"
+        ],
+        "title": "Triage",
+        "type": "object"
+      },
       "TriageInput": {
         "properties": {
           "route": {
@@ -474,6 +2158,87 @@
         "title": "TriageInput",
         "type": "object"
       },
+      "Tz": {
+        "properties": {
+          "lastReviewComment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastreviewcomment"
+          },
+          "openQuestions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TzQuestion"
+            },
+            "title": "Openquestions",
+            "type": "array"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "AI",
+                  "STAFF"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "sections": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TzSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "NOT_STARTED",
+              "PROCESSING",
+              "DRAFT_READY",
+              "IN_REVIEW",
+              "NEEDS_REWORK",
+              "APPROVED",
+              "AI_FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "version"
+        ],
+        "title": "Tz",
+        "type": "object"
+      },
       "TzInput": {
         "properties": {
           "answers": {
@@ -502,6 +2267,64 @@
           "baseVersion"
         ],
         "title": "TzInput",
+        "type": "object"
+      },
+      "TzQuestion": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "answer"
+        ],
+        "title": "TzQuestion",
+        "type": "object"
+      },
+      "TzSection": {
+        "properties": {
+          "editedByStaff": {
+            "default": false,
+            "title": "Editedbystaff",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "text"
+        ],
+        "title": "TzSection",
         "type": "object"
       },
       "ValidationError": {
@@ -556,6 +2379,34 @@
           "version"
         ],
         "title": "VersionInput",
+        "type": "object"
+      },
+      "Winner": {
+        "properties": {
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "string"
+          },
+          "selectedAt": {
+            "format": "date-time",
+            "title": "Selectedat",
+            "type": "string"
+          },
+          "selectedBy": {
+            "$ref": "#/components/schemas/Actor"
+          }
+        },
+        "required": [
+          "quoteId",
+          "selectedBy",
+          "selectedAt",
+          "comment"
+        ],
+        "title": "Winner",
         "type": "object"
       },
       "WinnerInput": {
@@ -640,20 +2491,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Page_JournalEntry_"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "List Journal",
@@ -693,20 +2596,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Approval_"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Queue",
@@ -733,20 +2688,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalDetail"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Detail",
@@ -796,20 +2803,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Approval"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Decide",
@@ -825,10 +2884,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Contractor_"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "List Contractors",
@@ -854,20 +2975,72 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FileRef"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Upload",
@@ -894,15 +3067,65 @@
           "200": {
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Download",
@@ -932,20 +3155,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RequestSummary_"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "List Requests",
@@ -988,20 +3263,72 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDetail"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Create Request",
@@ -1028,20 +3355,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDetail"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Request Detail",
@@ -1068,20 +3447,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Nmc"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Nmc",
@@ -1118,20 +3549,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Nmc"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Calculate",
@@ -1158,20 +3641,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Package"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Package",
@@ -1219,15 +3754,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Package Zip",
@@ -1264,20 +3849,72 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DraftRequest"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Quote Request",
@@ -1304,20 +3941,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Quote_"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "List Quotes",
@@ -1352,20 +4041,72 @@
           "202": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Add Quote",
@@ -1392,20 +4133,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Comparison",
@@ -1441,15 +4234,65 @@
           "204": {
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Delete Quote",
@@ -1495,20 +4338,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Edit Quote",
@@ -1556,15 +4451,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Restart",
@@ -1591,20 +4536,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Tender"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Tender",
@@ -1641,20 +4638,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Tender"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Choose Winner",
@@ -1681,20 +4730,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Triage"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Triage",
@@ -1731,20 +4832,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Triage"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Confirm",
@@ -1771,20 +4924,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Tz"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Tz",
@@ -1819,20 +5024,72 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Tz"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Edit Tz",
@@ -1883,20 +5140,72 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Approval"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Submit",
@@ -1911,6 +5220,66 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Logout",
@@ -1930,6 +5299,66 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Session",
@@ -1962,15 +5391,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemView"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
           }
         },
         "summary": "Login",

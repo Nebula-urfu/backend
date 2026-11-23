@@ -10,6 +10,7 @@ from .documents import generate
 from .errors import invalid, missing, require, version
 from .requests import AI_ENABLED, actor, attach, enqueue, find, page, public, read, save, state
 from .schemas import CalculationInput, QuoteEdit, QuoteInput, Recipients, WinnerInput
+from . import views
 
 router = APIRouter(tags=["procurement"])
 MIN_QUOTES = int(os.getenv("MIN_QUOTES", "3"))
@@ -21,7 +22,7 @@ def directory(conn, user):
     return {row.id: row.data for row in conn.execute(select(contractors).where(contractors.c.org == user.org))}
 
 
-@router.get("/contractors")
+@router.get("/contractors", response_model=views.Page[views.Contractor])
 def list_contractors(user: User, conn: Conn):
     allow(user, "STAFF")
     return page(sorted(directory(conn, user).values(), key=lambda c: c["name"]))
@@ -32,7 +33,7 @@ def staff_request(ident, user, conn):
     return find(conn, user, ident, True)
 
 
-@router.post("/requests/{ident}/quote-requests", status_code=201)
+@router.post("/requests/{ident}/quote-requests", status_code=201, response_model=views.DraftRequest)
 def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     require(row.data["tz"]["state"] == "APPROVED")
@@ -58,13 +59,13 @@ def invalidate(row):
     state(nmc, "DRAFT_READY")
 
 
-@router.get("/requests/{ident}/quotes")
+@router.get("/requests/{ident}/quotes", response_model=views.Page[views.Quote])
 def list_quotes(ident: str, user: User, conn: Conn):
     allow(user, "STAFF", "REVIEWER")
     return page([public(q) for q in find(conn, user, ident).data["quotes"].values()])
 
 
-@router.post("/requests/{ident}/quotes", status_code=202)
+@router.post("/requests/{ident}/quotes", status_code=202, response_model=views.Quote)
 def add_quote(ident: str, body: QuoteInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     quotes = editable(row)
@@ -93,7 +94,7 @@ def delete_quote(ident: str, quote_id: str, user: User, conn: Conn):
     save(conn, row)
 
 
-@router.put("/requests/{ident}/quotes/{quote_id}/data")
+@router.put("/requests/{ident}/quotes/{quote_id}/data", response_model=views.Quote)
 def edit_quote(ident: str, quote_id: str, body: QuoteEdit, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     quote = editable(row).get(quote_id)
@@ -109,7 +110,7 @@ def edit_quote(ident: str, quote_id: str, body: QuoteEdit, user: User, conn: Con
     return public(quote)
 
 
-@router.get("/requests/{ident}/quotes/comparison")
+@router.get("/requests/{ident}/quotes/comparison", response_model=views.Comparison)
 def comparison(ident: str, user: User, conn: Conn):
     allow(user, "STAFF", "REVIEWER")
     quotes = [q for q in find(conn, user, ident).data["quotes"].values() if q["data"]]
@@ -130,12 +131,12 @@ def comparison(ident: str, user: User, conn: Conn):
         ("contractorName", "totalPrice", "termsDays", "warranty")}) for q in quotes], rows=rows, discrepancies=discrepancies)
 
 
-@router.get("/requests/{ident}/nmc")
+@router.get("/requests/{ident}/nmc", response_model=views.Nmc, response_model_exclude_unset=True)
 def nmc(ident: str, user: User, conn: Conn):
     return read(ident, user, conn, "nmc")
 
 
-@router.post("/requests/{ident}/nmc/calculate")
+@router.post("/requests/{ident}/nmc/calculate", response_model=views.Nmc, response_model_exclude_unset=True)
 def calculate(ident: str, body: CalculationInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     quotes = editable(row)
@@ -160,12 +161,12 @@ def calculate(ident: str, body: CalculationInput, user: User, conn: Conn):
     return doc
 
 
-@router.get("/requests/{ident}/tender")
+@router.get("/requests/{ident}/tender", response_model=views.Tender)
 def tender(ident: str, user: User, conn: Conn):
     return read(ident, user, conn, "tender")
 
 
-@router.put("/requests/{ident}/tender/winner")
+@router.put("/requests/{ident}/tender/winner", response_model=views.Tender)
 def choose_winner(ident: str, body: WinnerInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     d = row.data
@@ -186,6 +187,6 @@ def choose_winner(ident: str, body: WinnerInput, user: User, conn: Conn):
     return tender_doc
 
 
-@router.get("/requests/{ident}/package")
+@router.get("/requests/{ident}/package", response_model=views.Package, response_model_exclude_unset=True)
 def package(ident: str, user: User, conn: Conn):
     return read(ident, user, conn, "package")

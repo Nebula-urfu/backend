@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from PIL import Image
 from sqlalchemy import select
 
+from .views import FileRef
 from .auth import Conn, User, allow
 from .db import STORAGE, files, uid
 from .errors import invalid, missing, require, version as check_version
@@ -56,7 +57,7 @@ def verify(data, ext):
                 raise ValueError()
 
 
-@router.post("/files", status_code=201)
+@router.post("/files", status_code=201, response_model=FileRef)
 def upload(user: User, conn: Conn, file: UploadFile = File()):
     allow(user, "RESIDENT", "STAFF")
     name = re.sub(r"[\x00-\x1f\x7f]", "", (file.filename or "").replace("\\", "/").split("/")[-1])

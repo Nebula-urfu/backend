@@ -11,6 +11,7 @@ from .auth import Conn, User, allow
 from .db import files, jobs, requests, stamp, uid
 from .errors import invalid, missing, require, version
 from .schemas import RequestInput, TriageInput, TzInput
+from . import views
 
 router = APIRouter(tags=["requests"])
 AI_ENABLED = bool(os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_BASE_URL"))
@@ -95,7 +96,7 @@ def public(doc):
     return {key: value for key, value in doc.items() if key != "generation"}
 
 
-@router.get("/requests")
+@router.get("/requests", response_model=views.Page[views.RequestSummary], response_model_exclude_unset=True)
 def list_requests(user: User, conn: Conn, limit: int = Query(100, ge=1, le=100)):
     query = select(requests).where(requests.c.org == user.org)
     if user.role == "RESIDENT":
@@ -105,7 +106,7 @@ def list_requests(user: User, conn: Conn, limit: int = Query(100, ge=1, le=100))
     return page(docs[:limit])
 
 
-@router.post("/requests", status_code=201)
+@router.post("/requests", status_code=201, response_model=views.RequestDetail, response_model_exclude_unset=True)
 def create_request(body: RequestInput, user: User, conn: Conn,
                    key: Annotated[str | None, Header(alias="Idempotency-Key", max_length=200)] = None):
     allow(user, "RESIDENT")
@@ -133,7 +134,7 @@ def create_request(body: RequestInput, user: User, conn: Conn,
     return summary(find(conn, user, ident), True, True)
 
 
-@router.get("/requests/{ident}")
+@router.get("/requests/{ident}", response_model=views.RequestDetail, response_model_exclude_unset=True)
 def request_detail(ident: str, user: User, conn: Conn):
     return summary(find(conn, user, ident), user.role == "RESIDENT", True)
 
@@ -143,7 +144,7 @@ def read(ident, user, conn, key):
     return public(find(conn, user, ident).data[key])
 
 
-@router.get("/requests/{ident}/triage")
+@router.get("/requests/{ident}/triage", response_model=views.Triage, response_model_exclude_unset=True)
 def triage(ident: str, user: User, conn: Conn):
     return read(ident, user, conn, "triage")
 
@@ -155,7 +156,7 @@ def default_tz(description):
     ]
 
 
-@router.post("/requests/{ident}/triage/confirm")
+@router.post("/requests/{ident}/triage/confirm", response_model=views.Triage)
 def confirm(ident: str, body: TriageInput, user: User, conn: Conn):
     allow(user, "STAFF")
     row = find(conn, user, ident, True)
@@ -173,12 +174,12 @@ def confirm(ident: str, body: TriageInput, user: User, conn: Conn):
     return public(d["triage"])
 
 
-@router.get("/requests/{ident}/tz")
+@router.get("/requests/{ident}/tz", response_model=views.Tz, response_model_exclude_unset=True)
 def tz(ident: str, user: User, conn: Conn):
     return read(ident, user, conn, "tz")
 
 
-@router.put("/requests/{ident}/tz")
+@router.put("/requests/{ident}/tz", response_model=views.Tz, response_model_exclude_unset=True)
 def edit_tz(ident: str, body: TzInput, user: User, conn: Conn):
     allow(user, "STAFF")
     row = find(conn, user, ident, True)

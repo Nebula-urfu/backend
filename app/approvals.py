@@ -9,12 +9,13 @@ from .db import approvals, stamp, uid
 from .errors import invalid, missing, require, version
 from .requests import actor, find, page, save, state
 from .schemas import DecisionInput, VersionInput
+from . import views
 
 router = APIRouter(tags=["approvals"])
 KINDS = {"tz": "TZ", "nmc": "NMC", "package": "PACKAGE"}
 
 
-@router.post("/requests/{ident}/{kind}/submit", status_code=201)
+@router.post("/requests/{ident}/{kind}/submit", status_code=201, response_model=views.Approval)
 def submit(ident: str, kind: Literal["tz", "nmc", "package"], body: VersionInput, user: User, conn: Conn):
     allow(user, "STAFF")
     row = find(conn, user, ident, True)
@@ -55,7 +56,7 @@ def journal(items):
             for a in items if a["state"] != "PENDING"]
 
 
-@router.get("/approvals")
+@router.get("/approvals", response_model=views.Page[views.Approval])
 def queue(user: User, conn: Conn, state: str = "PENDING", limit: int = Query(100, ge=1, le=100)):
     allow(user, "REVIEWER")
     return page([without_subject(a) for a in query(user, conn) if a["state"] == state][:limit])
@@ -69,7 +70,7 @@ def approval_row(ident, user, conn, lock=False):
     return row
 
 
-@router.get("/approvals/{ident}")
+@router.get("/approvals/{ident}", response_model=views.ApprovalDetail, response_model_exclude_unset=True)
 def detail(ident: str, user: User, conn: Conn):
     allow(user, "REVIEWER")
     row = approval_row(ident, user, conn)
@@ -78,7 +79,7 @@ def detail(ident: str, user: User, conn: Conn):
     ]))
 
 
-@router.post("/approvals/{ident}/{action}")
+@router.post("/approvals/{ident}/{action}", response_model=views.Approval)
 def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput, user: User, conn: Conn):
     allow(user, "REVIEWER")
     approval = approval_row(ident, user, conn, True)
@@ -107,7 +108,7 @@ def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput
     return without_subject(approval.data)
 
 
-@router.get("/approval-journal")
+@router.get("/approval-journal", response_model=views.Page[views.JournalEntry])
 def list_journal(user: User, conn: Conn, requestId: str | None = None,
                  subjectType: str | None = None, limit: int = Query(100, ge=1, le=100)):
     allow(user, "STAFF", "REVIEWER")
