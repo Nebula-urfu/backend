@@ -63,3 +63,55 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
         provider.shutdown()
         thread.join()
         provider.server_close()
+
+
+def test_provider_outage_stops_retrying_and_keeps_manual_path(monkeypatch):
+    calls = []
+
+    def unavailable(job, data):
+        calls.append(job.id)
+        raise TimeoutError()
+
+    monkeypatch.setattr(ai, "AI_ENABLED", True)
+    monkeypatch.setattr(ai, "inference", unavailable)
+    rid, jid = uid(), uid()
+    with engine.begin() as conn:
+        conn.execute(requests.insert().values(id=rid, org="pilot", author="resident", key=rid,
+            fingerprint=rid, data={"description": "Течь", "photos": [],
+            "triage": {"state": "PROCESSING", "generation": 1}, "tz": {"version": 0}}))
+        conn.execute(jobs.insert().values(id=jid, request_id=rid, kind="triage", target="", generation=1,
+                                         state="queued", attempt=0))
+    for _ in range(ai.MAX_ATTEMPTS):
+        assert ai.process_one()
+    assert not ai.process_one()
+    assert calls == [jid] * ai.MAX_ATTEMPTS
+    with engine.begin() as conn:
+        data = conn.execute(select(requests.c.data).where(requests.c.id == rid)).scalar_one()
+        assert data["triage"]["state"] == "AI_FAILED"
+        assert data["tz"]["version"] == 0
+        assert conn.execute(select(jobs.c.state).where(jobs.c.id == jid)).scalar_one() == "failed"
+
+
+def test_manual_quote_edit_wins_over_inflight_result(monkeypatch):
+    rid, jid, qid = uid(), uid(), uid()
+    with engine.begin() as conn:
+        conn.execute(requests.insert().values(id=rid, org="pilot", author="resident", key=rid,
+            fingerprint=rid, data={"quotes": {qid: {"extraction": "EXTRACTING", "version": 1, "generation": 1}},
+                                   "nmc": {"state": "DRAFT_READY"}}))
+        conn.execute(jobs.insert().values(id=jid, request_id=rid, kind="quote", target=qid, generation=1,
+                                         state="queued", attempt=0))
+
+    def finish_after_manual_edit(job, data):
+        with engine.begin() as conn:
+            record = conn.execute(select(requests.c.data).where(requests.c.id == rid).with_for_update()).scalar_one()
+            record["quotes"][qid].update(extraction="EXTRACTED", version=2, editedByStaff=True, data={"contractorName": "Manual"})
+            conn.execute(update(requests).where(requests.c.id == rid).values(data=record))
+        return {"contractorName": "Late"}
+
+    monkeypatch.setattr(ai, "AI_ENABLED", True)
+    monkeypatch.setattr(ai, "inference", finish_after_manual_edit)
+    assert ai.process_one()
+    with engine.begin() as conn:
+        data = conn.execute(select(requests.c.data).where(requests.c.id == rid)).scalar_one()
+        assert data["quotes"][qid]["data"] == {"contractorName": "Manual"}
+        assert conn.execute(select(jobs.c.state).where(jobs.c.id == jid)).scalar_one() == "obsolete"
