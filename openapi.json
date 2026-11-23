@@ -2826,6 +2826,144 @@
         "title": "StepInfo",
         "type": "object"
       },
+      "TemplateFields": {
+        "properties": {
+          "contractTerms": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Contractterms",
+            "type": "string"
+          },
+          "letterBody": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Letterbody",
+            "type": "string"
+          },
+          "letterSubject": {
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Lettersubject",
+            "type": "string"
+          },
+          "protocolIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Protocolintro",
+            "type": "string"
+          },
+          "quoteFormIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Quoteformintro",
+            "type": "string"
+          },
+          "specIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Specintro",
+            "type": "string"
+          }
+        },
+        "required": [
+          "letterSubject",
+          "letterBody",
+          "specIntro",
+          "quoteFormIntro",
+          "contractTerms",
+          "protocolIntro"
+        ],
+        "title": "TemplateFields",
+        "type": "object"
+      },
+      "TemplateUpdate": {
+        "properties": {
+          "contractTerms": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Contractterms",
+            "type": "string"
+          },
+          "letterBody": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Letterbody",
+            "type": "string"
+          },
+          "letterSubject": {
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Lettersubject",
+            "type": "string"
+          },
+          "protocolIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Protocolintro",
+            "type": "string"
+          },
+          "quoteFormIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Quoteformintro",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "specIntro": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Specintro",
+            "type": "string"
+          }
+        },
+        "required": [
+          "letterSubject",
+          "letterBody",
+          "specIntro",
+          "quoteFormIntro",
+          "contractTerms",
+          "protocolIntro",
+          "revision"
+        ],
+        "title": "TemplateUpdate",
+        "type": "object"
+      },
+      "TemplateView": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/TemplateFields"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "values": {
+            "$ref": "#/components/schemas/TemplateFields"
+          },
+          "variables": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "revision",
+          "values",
+          "defaults",
+          "variables"
+        ],
+        "title": "TemplateView",
+        "type": "object"
+      },
       "Tender": {
         "properties": {
           "contract": {
@@ -3408,6 +3546,176 @@
           }
         },
         "summary": "Stats",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/templates": {
+      "get": {
+        "operationId": "get_templates_api_v1_admin_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Get Templates",
+        "tags": [
+          "administration"
+        ]
+      },
+      "put": {
+        "operationId": "save_templates_api_v1_admin_templates_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Save Templates",
         "tags": [
           "administration"
         ]

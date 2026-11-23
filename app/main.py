@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import iter_route_contexts
 from sqlalchemy import select
 
-from . import admin, approvals, auth, documents, procurement, requests
+from . import admin, approvals, auth, documents, procurement, requests, templates
 from .ai import worker
 from .auth import Conn
 from .errors import Problem
@@ -83,7 +83,7 @@ def health(conn: Conn):
     return {"status": "ok"}
 
 
-for router in (auth.router, admin.router, requests.router, documents.router, procurement.router, approvals.router):
+for router in (auth.router, admin.router, requests.router, documents.router, procurement.router, approvals.router, templates.router):
     app.include_router(router, prefix="/api/v1", responses={
         code: {"model": ProblemView, "description": title, "content": {"application/problem+json": {}}}
         for code, title in {400: "Invalid input", 401: "Authentication required", 403: "Forbidden",

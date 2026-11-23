@@ -17,6 +17,8 @@ def table(name, *columns):
 
 
 orgs = table("organizations", Column("name", String, nullable=False))
+templates = Table("procurement_templates", metadata, Column("org", ForeignKey(orgs.c.id), primary_key=True),
+                  Column("revision", Integer, nullable=False), Column("data", JSONB, nullable=False))
 users = table(
     "users", Column("org", ForeignKey(orgs.c.id), nullable=False),
     Column("username", String, unique=True, nullable=False),

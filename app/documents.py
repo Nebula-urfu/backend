@@ -16,6 +16,7 @@ from .db import STORAGE, files, uid
 from .errors import invalid, missing, require, version as check_version
 from .logging_config import event
 from .requests import find
+from .templates import current, render, variables_for
 
 router = APIRouter(tags=["files"])
 MIME = {
@@ -100,10 +101,10 @@ def download(ident: str, user: User, conn: Conn):
                         headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
 
 
-def docx(title, paragraphs):
+def docx(title, paragraphs, intro="Шаблон пилота. Требует проверки перед использованием."):
     doc = Document()
     doc.add_heading(title, 0)
-    doc.add_paragraph("Шаблон пилота. Требует проверки перед использованием.")
+    doc.add_paragraph(intro)
     for paragraph in paragraphs:
         doc.add_paragraph(paragraph)
     out = io.BytesIO()
@@ -129,16 +130,19 @@ def format_amount(price):
     return f'{price["amount"]} {price["currency"]}'
 
 
-def generate(conn, user, row, version, winner=None):
+def generate(conn, user, row, version, winner=None, template=None):
     d = row.data
+    if template is None:
+        _, template = current(conn, row.org)
+    variables = variables_for(row)
     scope = f'{d["address"]}, подъезд {d["entrance"]}. Заявка {row.id}. ТЗ v{d["tz"]["version"]}.'
     contents = [
         ("TZ", "Техническое задание.docx", docx("Техническое задание", [
             scope, *(f'{s["title"]}: {s["text"]}' for s in d["tz"]["sections"]),
             *(f'{q["text"]}: {q["answer"] or "Без ответа"}' for q in d["tz"]["openQuestions"]),
-        ])),
+        ], intro=render(template["specIntro"], variables))),
         ("QUOTE_FORM", "Форма КП.xlsx", xlsx("КП", [
-            ["Шаблон пилота"], [scope], ["Объём работ по утверждённому ТЗ"],
+            [render(template["quoteFormIntro"], variables)], [scope], ["Объём работ по утверждённому ТЗ"],
             *[[s["title"], s["text"]] for s in d["tz"]["sections"]],
             ["Подрядчик", "Цена, RUB", "Срок, дней", "Гарантия"],
         ])),
@@ -151,10 +155,12 @@ def generate(conn, user, row, version, winner=None):
                 scope, f'Подрядчик: {quote["contractorName"]}', f'Цена: {format_amount(quote["totalPrice"])}',
                 f'Срок, дней: {quote.get("termsDays") or "уточнить"}',
                 f'Гарантия: {quote.get("warranty") or "уточнить"}',
-                "Работы и приёмка по приложенному техническому заданию. Реквизиты и условия оплаты подлежат заполнению.",
+                render(template["contractTerms"], {**variables, "contractor": quote["contractorName"],
+                    "price": format_amount(quote["totalPrice"]), "days": quote.get("termsDays") or "уточнить",
+                    "warranty": quote.get("warranty") or "уточнить"}),
             ])),
             ("EVALUATION_PROTOCOL", "Протокол оценки.xlsx", xlsx("Оценка", [
-                ["Шаблон пилота"], [scope], [f'НМЦ v{nmc["version"]}', format_amount(nmc["amount"]), nmc["justification"]],
+                [render(template["protocolIntro"], {**variables, "nmc": format_amount(nmc["amount"])})], [scope], [f'НМЦ v{nmc["version"]}', format_amount(nmc["amount"]), nmc["justification"]],
                 ["Подрядчик", "Цена", "Срок", "Гарантия", "Решение"],
                 *[[q["data"]["contractorName"], format_amount(q["data"]["totalPrice"]), q["data"].get("termsDays"),
                    q["data"].get("warranty"), "Выбран сотрудником" if q["id"] == winner["id"] else ""]

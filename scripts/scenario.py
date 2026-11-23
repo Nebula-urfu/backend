@@ -30,6 +30,13 @@ def login(name):
 
 def run():
     resident, staff, reviewer, outsider, neighbor = [login(name) for name in ("resident", "staff", "reviewer", "outsider", "neighbor")]
+    admin = login("admin")
+    template = call(admin, "GET", "/admin/templates").json()
+    customised = {**template["values"], "letterSubject": "Пилот {{draft_subject}}",
+                  "specIntro": "Версия ТЗ {{tz_version}}", "contractTerms": "Тестовое условие. Цена: {{price}}"}
+    saved_template = call(admin, "PUT", "/admin/templates", json={**customised, "revision": template["revision"]}).json()
+    call(admin, "PUT", "/admin/templates", 409, json={**customised, "revision": template["revision"]})
+    call(staff, "GET", "/admin/templates", 403)
     call(staff, "PUT", "/session/profile", json={"displayName": "Сотрудник УК", "phone": "+7 (900) 100-00-01"})
     call(reviewer, "PUT", "/session/profile", json={"displayName": "Проверяющий УК", "phone": "+7 (900) 100-00-02"})
     picture = io.BytesIO()
@@ -80,6 +87,10 @@ def run():
     companies = call(staff, "GET", "/contractors").json()["items"]
     draft = call(staff, "POST", p + "/quote-requests", 201, json={"contractorIds": [c["id"] for c in companies]}).json()
     assert len(draft["attachments"]) == 2
+    assert draft["subject"].startswith("Пилот ")
+    tz_attachment = next(f for f in draft["attachments"] if f["name"].endswith(".docx"))
+    loaded_tz = Document(io.BytesIO(call(staff, "GET", "/files/" + tz_attachment["fileId"] + "/download").content))
+    assert any(line.text.startswith("Версия ТЗ ") for line in loaded_tz.paragraphs)
     assert "Сотрудник УК" in draft["body"] and "+7 (900) 100-00-01" in draft["body"]
     quotes = []
     for i, company in enumerate(companies):
@@ -122,6 +133,7 @@ def run():
     assert len(call(reviewer, "GET", "/approval-journal", params={"requestId": ident}).json()["items"]) == 5
     call(staff, "DELETE", "/session", 204)
     call(staff, "GET", p, 401)
+    call(admin, "PUT", "/admin/templates", json={**template["defaults"], "revision": saved_template["revision"]})
     print(ident, flush=True)
     return ident
 

@@ -10,6 +10,7 @@ from .requests import AI_ENABLED, actor, attach, enqueue, find, page, public, re
 from .schemas import CalculationInput, LetterInput, QuoteEdit, QuoteInput, Recipients, WinnerInput
 from . import views
 from .workflow import MIN_QUOTES, advance, calculate_amount, complete_tz
+from .templates import current, render, variables_for
 
 router = APIRouter(tags=["procurement"])
 
@@ -56,15 +57,20 @@ def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
         raise missing()
     letter = row.data["tz"].get("letter") or {}
     text = letter.get("body", "Просим указать полную стоимость работ по приложенному ТЗ, сроки и гарантию.")
+    _, template = current(conn, row.org)
+    variables = dict(variables_for(row), draft=text, draft_subject=letter.get("subject", "Запрос коммерческого предложения"),
+                     staff_name=user.name, staff_phone=user.phone)
+    text = render(template["letterBody"], variables)
+    subject = " ".join(render(template["letterSubject"], variables).splitlines())[:250]
     signature = "\n".join(filter(None, (user.name, "Телефон: " + user.phone if user.phone else "")))
     text = text.replace("[Ваше имя]", user.name).replace("[Ваш телефон]", user.phone)
     if user.name not in text or (user.phone and user.phone not in text):
         text += "\n\nКонтакт УК:\n" + signature
     return dict(id=uid(), recipients=[
         {"contractorId": i, "name": records[i]["name"], "email": records[i]["email"]} for i in dict.fromkeys(body.contractorIds)
-    ], subject=letter.get("subject", "Запрос коммерческого предложения"),
+    ], subject=subject,
         body=text,
-        attachments=generate(conn, user, row, row.data["tz"]["version"]))
+        attachments=generate(conn, user, row, row.data["tz"]["version"], template=template))
 
 
 def editable(row):
