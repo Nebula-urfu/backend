@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import iter_route_contexts
 from sqlalchemy import select
 
 from . import admin, approvals, auth, documents, procurement, requests
@@ -20,6 +21,7 @@ from .views import ProblemView
 @asynccontextmanager
 async def lifespan(app):
     configure()
+    app.state.log_routes = {id(route.original_route): route.path for route in iter_route_contexts(app.routes)}
     event("application.started")
     task = asyncio.create_task(worker())
     try:
@@ -54,7 +56,7 @@ async def private_api(request, call_next):
         if request.url.path == "/healthz" and status == 200:
             level = logging.DEBUG
         route = request.scope.get("route")
-        event("http.request", level, method=request.method, route=getattr(route, "path", "<unmatched>"),
+        event("http.request", level, method=request.method, route=getattr(request.app.state, "log_routes", {}).get(id(route)) or getattr(route, "path", "<unmatched>"),
               status=status, problem_code=getattr(request.state, "problem_code", None), duration_ms=round((monotonic() - started) * 1000, 1))
         return response
     finally:
