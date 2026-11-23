@@ -48,5 +48,5 @@ docker compose logs --since=1h backend | rg 'ai\.|workflow\.|file\.'
 
 ```sh
 LOG_FORMAT=dev LOG_COLOR=always docker compose up -d --no-deps backend
-docker compose logs -f --no-log-prefix --tail=150 backend
+env -u NO_COLOR docker compose --ansi always logs -f --no-log-prefix --tail=150 backend
 ```
