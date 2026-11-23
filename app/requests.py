@@ -100,6 +100,7 @@ def public(doc):
 
 @router.get("/requests", response_model=views.Page[views.RequestSummary], response_model_exclude_unset=True)
 def list_requests(user: User, conn: Conn, limit: int = Query(100, ge=1, le=100)):
+    allow(user, "RESIDENT", "STAFF", "REVIEWER")
     query = select(requests).where(requests.c.org == user.org)
     if user.role == "RESIDENT":
         query = query.where(requests.c.author == user.id)
@@ -138,6 +139,7 @@ def create_request(body: RequestInput, user: User, conn: Conn,
 
 @router.get("/requests/{ident}", response_model=views.RequestDetail, response_model_exclude_unset=True)
 def request_detail(ident: str, user: User, conn: Conn):
+    allow(user, "RESIDENT", "STAFF", "REVIEWER")
     return summary(find(conn, user, ident), user.role == "RESIDENT", True)
 
 

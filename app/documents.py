@@ -77,6 +77,7 @@ def upload(user: User, conn: Conn, file: UploadFile = File()):
 
 @router.get("/files/{ident}/download", response_class=FileResponse)
 def download(ident: str, user: User, conn: Conn):
+    allow(user, "RESIDENT", "STAFF", "REVIEWER")
     row = conn.execute(select(files).where(files.c.id == ident)).first()
     if not row:
         raise missing()

@@ -14,9 +14,10 @@ def main():
     org.add_argument("name")
     user = commands.add_parser("user")
     user.add_argument("org")
-    user.add_argument("role", choices=["RESIDENT", "STAFF", "REVIEWER"])
+    user.add_argument("role", choices=["RESIDENT", "STAFF", "REVIEWER", "ADMIN"])
     user.add_argument("username")
     user.add_argument("name")
+    user.add_argument("--extra-role", action="append", choices=["RESIDENT", "STAFF", "REVIEWER", "ADMIN"], default=[])
     user.add_argument("--address", default="")
     user.add_argument("--password-stdin", action="store_true")
     contractor = commands.add_parser("contractor")
@@ -29,13 +30,14 @@ def main():
         if args.command == "org":
             conn.execute(orgs.insert().values(id=args.id, name=args.name))
         elif args.command == "user":
-            if args.role == "RESIDENT" and not args.address.strip():
+            roles = list(dict.fromkeys([args.role, *args.extra_role]))
+            if "RESIDENT" in roles and not args.address.strip():
                 parser.error("a resident needs --address")
             password = sys.stdin.readline().rstrip("\r\n") if args.password_stdin else getpass.getpass()
             if not 12 <= len(password) <= 256:
                 parser.error("password must have 12 to 256 characters")
             conn.execute(users.insert().values(
-                id=uid(), org=args.org, role=args.role, username=args.username.strip().lower(),
+                id=uid(), org=args.org, role=args.role, roles=roles, username=args.username.strip().lower(),
                 name=args.name, address=args.address, password=PASSWORDS.hash(password),
             ))
         else:

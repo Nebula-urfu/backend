@@ -21,7 +21,7 @@ async function login(username) {
   const logged = waitApi(page, '/session/login', 'POST', 200)
   await button(page, 'Войти').click()
   await logged
-  await page.waitForURL(username === 'reviewer' ? '**/approvals' : '**/requests')
+  await page.waitForURL(username === 'admin' ? '**/admin' : username === 'reviewer' ? '**/approvals' : '**/requests')
   assert((await context.cookies()).some(c => c.name === 'nebula_session' && c.httpOnly))
   return page
 }
@@ -44,6 +44,25 @@ async function decide(reviewer, id, reject) {
 }
 
 try {
+  const admin = await login("admin")
+  await button(admin, "Добавить пользователя").click()
+  await admin.getByLabel("Логин", { exact: true }).fill("browser-multi")
+  await admin.getByLabel("Имя", { exact: true }).fill("Три роли в одном аккаунте")
+  await admin.getByLabel("Адрес жителя").fill("Учебный адрес, 1")
+  for (const label of ["Житель", "Сотрудник УК", "Проверяющий"]) await admin.getByRole("checkbox", { name: label }).check()
+  await admin.getByLabel("Пароль", { exact: true }).fill(credentials)
+  const addedAccount = waitApi(admin, "/admin/users", "POST", 201)
+  await button(admin, "Сохранить").click()
+  assert((await (await addedAccount).json()).roles.length === 3)
+  await button(admin, "Аналитика").click()
+  await admin.getByText("Использование модели", { exact: true }).waitFor()
+  const multi = await login("browser-multi")
+  await button(multi, "Житель").click()
+  const switched = waitApi(multi, "/session/role", "PUT", 200)
+  await button(multi, "Проверяющий").click()
+  await switched
+  await multi.waitForURL("**/approvals")
+  await multi.getByRole("heading", { name: "Очередь на проверку" }).first().waitFor()
   const resident = await login('resident')
   const staff = await login('staff')
   const reviewer = await login('reviewer')

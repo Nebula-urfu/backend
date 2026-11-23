@@ -4,6 +4,7 @@ import io
 import logging
 import os
 import re
+from time import monotonic
 
 from openai import OpenAI
 from PIL import Image
@@ -11,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 from pypdf import PdfReader
 from sqlalchemy import select, update
 
-from .db import STORAGE, contractors, engine, jobs, requests, stamp
+from .db import STORAGE, contractors, engine, jobs, model_usage, now, requests, stamp, uid
 from .requests import AI_ENABLED, SECTIONS, save, state
 from .schemas import QuoteData, Short, Text, TriageInput
 
@@ -117,14 +118,29 @@ def inference(job, data):
         if not text:
             return None
         inputs = [{"type": "text", "text": ascii_safe_text(text)}]
-    result = client.chat.completions.create(
-        model=os.getenv("OPENAI_MODEL", "qwen3.5-9b"),
-        messages=[{"role": "system", "content": instruction}, {"role": "user", "content": inputs}],
-        max_tokens=3500, temperature=0,
-        response_format={"type": "json_schema", "json_schema": {"name": "procurement", "schema": schema.model_json_schema()}},
-        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-    )
-    return schema.model_validate_json(result.choices[0].message.content or "").model_dump(mode="json")
+    metrics = data.get("_metrics")
+    started = monotonic()
+    model = os.getenv("OPENAI_MODEL", "qwen3.5-9b")
+    if metrics is not None:
+        metrics.update(model=model, outcome="error")
+    try:
+        result = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "system", "content": instruction}, {"role": "user", "content": inputs}],
+            max_tokens=3500, temperature=0,
+            response_format={"type": "json_schema", "json_schema": {"name": "procurement", "schema": schema.model_json_schema()}},
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        )
+    finally:
+        if metrics is not None:
+            metrics["latency_ms"] = round((monotonic() - started) * 1000)
+    if metrics is not None and result.usage:
+        metrics.update(prompt_tokens=result.usage.prompt_tokens, completion_tokens=result.usage.completion_tokens,
+                       total_tokens=result.usage.total_tokens)
+    parsed = schema.model_validate_json(result.choices[0].message.content or "").model_dump(mode="json")
+    if metrics is not None:
+        metrics["outcome"] = "ok"
+    return parsed
 
 
 def target(job, data):
@@ -155,14 +171,17 @@ def process_one():
 
     result = None
     retry = False
+    metrics = {}
     if AI_ENABLED and job.attempt < MAX_ATTEMPTS:
         try:
-            result = inference(job, {**row.data, "directory": directory})
+            result = inference(job, {**row.data, "directory": directory, "_metrics": metrics})
         except Exception as exc:
             log.warning("AI task %s failed (%s)", job.id, type(exc).__name__)
             retry = job.attempt + 1 < MAX_ATTEMPTS
 
     with engine.begin() as conn:
+        if metrics:
+            conn.execute(model_usage.insert().values(id=uid(), org=row.org, kind=job.kind, recorded_at=now(), **metrics))
         row = conn.execute(select(requests).where(requests.c.id == job.request_id).with_for_update()).one()
         doc = target(job, row.data)
         active = relevant(job, doc)

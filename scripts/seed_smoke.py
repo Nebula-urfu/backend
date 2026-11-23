@@ -9,6 +9,7 @@ with engine.begin() as conn:
     for name, org, role in [
         ("resident", "pilot", "RESIDENT"), ("staff", "pilot", "STAFF"), ("reviewer", "pilot", "REVIEWER"),
         ("outsider", "outside", "STAFF"), ("neighbor", "pilot", "RESIDENT"),
+        ("admin", "pilot", "ADMIN"), ("other-admin", "outside", "ADMIN"),
     ]:
         conn.execute(users.insert().values(id=name, org=org, name=name, username=name, role=role,
                                            address="Пилотная улица, 1", password=secret))

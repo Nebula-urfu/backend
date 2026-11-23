@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from app import ai
 from app.requests import answer_clarifications
 from app.schemas import ResidentAnswers
-from app.db import engine, jobs, requests, stamp, uid, users
+from app.db import engine, jobs, model_usage, requests, stamp, uid, users
 
 
 def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
@@ -26,7 +26,7 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
     class Provider(BaseHTTPRequestHandler):
         def do_POST(self):
             received.append((self.path, json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
-            body = json.dumps(dict(id="test", object="chat.completion", created=0, model="qwen3.5-9b", choices=[
+            body = json.dumps(dict(id="test", object="chat.completion", created=0, model="qwen3.5-9b", usage=dict(prompt_tokens=80, completion_tokens=20, total_tokens=100), choices=[
                 dict(index=0, finish_reason="stop", message=dict(role="assistant", content=json.dumps(answer))),
             ])).encode()
             self.send_response(200)
@@ -62,6 +62,8 @@ def test_llamacpp_recovery_and_image(monkeypatch, tmp_path):
             assert len(data["tz"]["letter"]["contractorIds"]) == 3
             assert data["tz"]["letter"]["subject"] == "Запрос КП на ремонт кровли"
             assert conn.execute(select(jobs.c.attempt).where(jobs.c.id == jid)).scalar_one() == 2
+            usage = conn.execute(select(model_usage).where(model_usage.c.model == "qwen3.5-9b")).one()
+            assert usage.total_tokens == 100 and usage.outcome == "ok"
         path, payload = received[0]
         assert path == "/v1/chat/completions"
         assert payload["model"] == "qwen3.5-9b"

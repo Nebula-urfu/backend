@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, MetaData, String, Table, UniqueConstraint, create_engine
+from sqlalchemy import ARRAY, Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table, UniqueConstraint, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg:///nebula")
@@ -20,11 +20,14 @@ orgs = table("organizations", Column("name", String, nullable=False))
 users = table(
     "users", Column("org", ForeignKey(orgs.c.id), nullable=False),
     Column("username", String, unique=True, nullable=False),
+    Column("roles", ARRAY(String), nullable=False, server_default="{}"),
+    Column("enabled", Boolean, nullable=False, server_default="true"),
     *(Column(field, String, nullable=False) for field in ("password", "role", "name", "address")),
 )
 sessions = table(
     "sessions", Column("user_id", ForeignKey(users.c.id), nullable=False),
     Column("expires", DateTime(timezone=True), nullable=False),
+    Column("active_role", String),
 )
 attempts = table(
     "login_attempts", Column("count", Integer, nullable=False),
@@ -54,6 +57,15 @@ jobs = table(
     Column("kind", String, nullable=False), Column("target", String, nullable=False),
     Column("generation", Integer, nullable=False), Column("attempt", Integer, nullable=False),
     Column("state", String, nullable=False),
+)
+
+
+model_usage = table(
+    "model_usage", Column("org", ForeignKey(orgs.c.id), nullable=False),
+    *(Column(field, String, nullable=False) for field in ("kind", "model", "outcome")),
+    Column("recorded_at", DateTime(timezone=True), nullable=False),
+    Column("latency_ms", Integer, nullable=False),
+    *(Column(field, Integer) for field in ("prompt_tokens", "completion_tokens", "total_tokens")),
 )
 
 
