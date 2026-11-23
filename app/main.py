@@ -1,4 +1,7 @@
 import asyncio
+import logging
+from time import monotonic
+from uuid import uuid4
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
@@ -10,11 +13,14 @@ from . import admin, approvals, auth, documents, procurement, requests
 from .ai import worker
 from .auth import Conn
 from .errors import Problem
+from .logging_config import configure, event, request_id
 from .views import ProblemView
 
 
 @asynccontextmanager
 async def lifespan(app):
+    configure()
+    event("application.started")
     task = asyncio.create_task(worker())
     try:
         yield
@@ -22,6 +28,7 @@ async def lifespan(app):
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        event("application.stopped")
 
 
 app = FastAPI(title="Помощник УК по закупкам", version="0.1.0", lifespan=lifespan)
@@ -29,14 +36,34 @@ app = FastAPI(title="Помощник УК по закупкам", version="0.1.
 
 @app.middleware("http")
 async def private_api(request, call_next):
-    response = await call_next(request)
-    if request.url.path.startswith("/api/"):
-        response.headers["Cache-Control"] = "private, no-store"
-    return response
+    correlation = uuid4().hex
+    context = request_id.set(correlation)
+    started = monotonic()
+    try:
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            event("http.unhandled_error", logging.ERROR, error_type=type(exc).__name__)
+            response = JSONResponse({"status": 500, "title": "Внутренняя ошибка сервера"},
+                                    status_code=500, media_type="application/problem+json")
+        response.headers["X-Request-ID"] = correlation
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "private, no-store"
+        status = response.status_code
+        level = logging.ERROR if status >= 500 else logging.WARNING if status >= 400 else logging.INFO
+        if request.url.path == "/healthz" and status == 200:
+            level = logging.DEBUG
+        route = request.scope.get("route")
+        event("http.request", level, method=request.method, route=getattr(route, "path", "<unmatched>"),
+              status=status, problem_code=getattr(request.state, "problem_code", None), duration_ms=round((monotonic() - started) * 1000, 1))
+        return response
+    finally:
+        request_id.reset(context)
 
 
 @app.exception_handler(Problem)
 async def problem(request: Request, exc: Problem):
+    request.state.problem_code = exc.code
     return JSONResponse({"status": exc.status, "code": exc.code, "title": exc.title},
                         status_code=exc.status, media_type="application/problem+json")
 

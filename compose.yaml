@@ -1,3 +1,9 @@
+x-logging: &bounded-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:17.12-bookworm
@@ -14,12 +20,14 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *bounded-logging
   backend:
     image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
     environment:
       DATABASE_URL: postgresql+psycopg://nebula:${POSTGRES_PASSWORD}@postgres/nebula
       SECURE_COOKIES: ${SECURE_COOKIES:-true}
       MIN_QUOTES: ${MIN_QUOTES:-3}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AUTOMATIC_WORKFLOW: ${AUTOMATIC_WORKFLOW:-true}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-qwen3.5-9b}
@@ -36,6 +44,7 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *bounded-logging
   frontend:
     image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE}
     networks: [application]
@@ -45,6 +54,7 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *bounded-logging
   proxy:
     image: caddy:2.10.2-alpine
     environment:
@@ -62,6 +72,7 @@ services:
       frontend:
         condition: service_healthy
     restart: unless-stopped
+    logging: *bounded-logging
 networks:
   database:
     internal: true

@@ -13,13 +13,13 @@ from typing import Annotated
 from pypdf import PdfReader
 from sqlalchemy import select, update
 
+from .logging_config import event
 from .db import STORAGE, contractors, engine, jobs, model_usage, now, requests, stamp, uid
 from .requests import AI_ENABLED, SECTIONS, save, state
 from .workflow import SYSTEM_ACTOR, advance
 from .schemas import QuoteData, Short, Text, TriageInput
 
 MAX_ATTEMPTS = 3
-log = logging.getLogger(__name__)
 
 
 class Draft(BaseModel):
@@ -222,8 +222,9 @@ def process_one():
         try:
             result = inference(job, {**row.data, "directory": directory, "_metrics": metrics})
         except Exception as exc:
-            log.warning("AI task %s failed (%s)", job.id, type(exc).__name__)
             retry = job.attempt + 1 < MAX_ATTEMPTS
+            event("ai.attempt_failed", logging.WARNING, job_id=job.id, procurement_id=job.request_id, kind=job.kind,
+                  attempt=job.attempt + 1, retry=retry, error_type=type(exc).__name__)
 
     with engine.begin() as conn:
         if metrics:
@@ -233,6 +234,9 @@ def process_one():
         active = relevant(job, doc)
         outcome = "obsolete" if not active else "queued" if retry else "done" if result else "failed"
         conn.execute(update(jobs).where(jobs.c.id == job.id).values(state=outcome))
+        event("ai.job_result", logging.WARNING if outcome == "failed" else logging.INFO,
+              job_id=job.id, procurement_id=job.request_id, kind=job.kind, attempt=job.attempt + 1, outcome=outcome,
+              **{key: metrics.get(key) for key in ("model", "latency_ms", "total_tokens")})
         if not active or retry:
             return True
         if job.kind in ("triage", "redraft"):
@@ -283,6 +287,6 @@ async def worker():
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
             raise
-        except Exception:
-            log.exception("Background task loop failed")
+        except Exception as exc:
+            event("ai.worker_error", logging.ERROR, error_type=type(exc).__name__)
             await asyncio.sleep(3)

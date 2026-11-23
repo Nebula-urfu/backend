@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from .auth import Conn, User, allow
 from .db import files, jobs, requests, stamp, uid
 from .errors import Problem, invalid, missing, require, version
+from .logging_config import event
 from .schemas import DescriptionDraftInput, DescriptionDraftResponse, RequestInput, ResidentAnswers, TriageInput, TzInput
 from . import views
 
@@ -149,6 +150,7 @@ def create_request(body: RequestInput, user: User, conn: Conn,
     if AI_ENABLED:
         enqueue(conn, ident, "triage", "", d["triage"])
     conn.execute(update(requests).where(requests.c.id == ident).values(data=d))
+    event("procurement.created", procurement_id=ident)
     return summary(find(conn, user, ident), True, True)
 
 
@@ -354,6 +356,7 @@ def describe_photos(body: DescriptionDraftInput, user: User):
     except Exception as exc:
         raise Problem(503, "AI_UNAVAILABLE", "Не удалось составить описание. Попробуйте ещё раз или заполните поле вручную") from exc
     finally:
+        event("ai.description_result", **{key: metrics.get(key) for key in ("model", "latency_ms", "total_tokens", "outcome")})
         if metrics:
             with engine.begin() as conn:
                 conn.execute(model_usage.insert().values(

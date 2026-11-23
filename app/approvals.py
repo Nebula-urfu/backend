@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from .auth import Conn, User, allow
 from .db import approvals, contractors, stamp, uid
 from .errors import invalid, missing, require, version
+from .logging_config import event
 from .requests import actor, find, page, save, state
 from .schemas import DecisionInput, VersionInput
 from . import views
@@ -143,6 +144,8 @@ def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput
     if auto_package and corrections:
         advance(conn, row)
     save(conn, row)
+    event("approval.decided", approval_id=ident, procurement_id=row.id, subject=approval.kind,
+          version=approval.version, outcome=approval.data["state"])
     return without_subject(approval.data)
 
 

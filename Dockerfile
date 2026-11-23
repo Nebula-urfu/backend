@@ -13,4 +13,4 @@ COPY alembic.ini .
 COPY scripts/seed_smoke.py scripts/scenario.py scripts/
 ENV PATH=/app/.venv/bin:$PATH FILE_ROOT=/data/files PYTHONUNBUFFERED=1
 USER nebula
-CMD ["sh", "-ec", "alembic upgrade head; exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-ec", "alembic upgrade head; exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
