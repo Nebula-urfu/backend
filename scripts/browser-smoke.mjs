@@ -139,6 +139,42 @@ try {
   assert((await document).suggestedFilename().endsWith('.docx'))
   await resident.goto(path)
   await resident.getByText('Выполнена', { exact: true }).waitFor()
+  function session(page) {
+    return page.evaluate(async () => (await fetch("/api/v1/session")).json())
+  }
+  async function api(page, method, endpoint, options = {}) {
+    const sessionData = await session(page)
+    const res = await page.request.fetch(root + "/api/v1" + endpoint, { ...options, method,
+      headers: { "X-CSRF-Token": sessionData.csrfToken, ...options.headers } })
+    assert(res.ok(), endpoint + ": " + (await res.text()))
+    return res.json()
+  }
+  const photo = await api(resident, "POST", "/files", { multipart: { file: { name: "auto.png", mimeType: "image/png", buffer: png } } })
+  const automaticRequest = await api(resident, "POST", "/requests", { headers: { "Idempotency-Key": "browser-auto-" + Date.now() },
+    data: { description: "Проверка автоматической сборки пакета", entrance: "1", photoFileIds: [photo.fileId] } })
+  const autoPath = "/requests/" + automaticRequest.id
+  await staff.goto(root + autoPath)
+  const enabled = waitApi(staff, autoPath + "/automation", "POST", 200)
+  await button(staff, "Включить автоматическую подготовку").click()
+  await enabled
+  await api(staff, "POST", autoPath + "/triage/confirm", { data: { urgency: "PLANNED", route: "PLANNED_PROCUREMENT", workType: "Ремонт кровли" } })
+  const draftTz = await api(staff, "GET", autoPath + "/tz")
+  await api(staff, "PUT", autoPath + "/tz", { data: { baseVersion: draftTz.version,
+    sections: draftTz.sections.map(s => ({ id: s.id, text: "Восстановить кровлю и проверить отсутствие протечек." })) } })
+  for (let i = 0; i < 3; i++) {
+    const f = await api(staff, "POST", "/files", { multipart: { file: { name: "auto-kp.txt", mimeType: "text/plain", buffer: Buffer.from("Offer") } } })
+    const q = await api(staff, "POST", autoPath + "/quotes", { data: { fileIds: [f.fileId] } })
+    await api(staff, "PUT", autoPath + "/quotes/" + q.id + "/data", { data: { baseVersion: q.version,
+      data: { contractorName: "Автоматический тест " + i, totalPrice: { amount: String(100 + i * 10), currency: "RUB" } } } })
+  }
+  await staff.goto(root + autoPath + "?step=PACKAGE")
+  await button(staff, "Скачать черновик").waitFor()
+  const automaticApproval = (await api(reviewer, "GET", "/approvals")).items.find(a => a.requestId === automaticRequest.id)
+  await reviewer.goto(root + "/approvals/" + automaticApproval.id)
+  await reviewer.getByText("Техническое задание", { exact: true }).first().waitFor()
+  await reviewer.getByText("Расчёт НМЦ", { exact: true }).first().waitFor()
+  await decide(reviewer, automaticApproval.id, false)
+  await staff.getByTestId("package-approved").waitFor()
   console.log('Nuxt browser scenario passed')
 } finally {
   await browser.close()
