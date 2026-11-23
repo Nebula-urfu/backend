@@ -48,6 +48,8 @@ class RequestSummary(BaseModel):
     urgency: Literal["EMERGENCY", "PLANNED"] | None = None
     currentStep: Step | None = None
     currentStepState: State | None = None
+    automatic: bool | None = None
+    waitingFor: str | None = None
 
 
 class RequestDetail(RequestSummary):
@@ -113,6 +115,9 @@ class Document(BaseModel):
 class Package(Versioned):
     documents: list[Document]
     approvedAt: datetime | None = None
+    tzSnapshot: Tz | None = None
+    nmcSnapshot: Nmc | None = None
+    tenderSnapshot: Tender | None = None
 
 
 class Winner(BaseModel):
@@ -126,10 +131,15 @@ class Contract(BaseModel):
     type: Literal["STANDARD", "NON_STANDARD"]
 
 
+class WinnerProposal(BaseModel):
+    quoteId: str
+    rationale: str
+
+
 class Tender(BaseModel):
     state: State
     documents: list[Document]
-    winnerProposal: None
+    winnerProposal: WinnerProposal | None
     selectedWinner: Winner | None
     contract: Contract | None
 
@@ -142,6 +152,7 @@ class Quote(BaseModel):
     files: list[FileRef]
     data: QuoteData | None
     editedByStaff: bool = False
+    staleScope: bool = False
     createdAt: datetime
 
 
@@ -199,7 +210,7 @@ class JournalEntry(BaseModel):
     requestId: str
     subjectType: Subject
     subjectVersion: int
-    decision: Literal["APPROVED", "REJECTED"]
+    decision: Literal["APPROVED", "REJECTED", "SUPERSEDED"]
     decidedBy: Actor
     decidedAt: datetime
     comment: str | None = None
@@ -210,7 +221,7 @@ class Approval(BaseModel):
     requestId: str
     subjectType: Subject
     subjectVersion: int
-    state: Literal["PENDING", "APPROVED", "REJECTED"]
+    state: Literal["PENDING", "APPROVED", "REJECTED", "SUPERSEDED"]
     urgency: Literal["EMERGENCY", "PLANNED"]
     address: str
     submittedBy: Actor

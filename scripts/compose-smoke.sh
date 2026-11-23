@@ -4,6 +4,7 @@ set -euo pipefail
 export COMPOSE_PROJECT_NAME="nebula-smoke-$$"
 export POSTGRES_PASSWORD="smoke-$RANDOM-$RANDOM"
 export OPENAI_API_KEY= OPENAI_BASE_URL= SECURE_COOKIES=false
+export AUTOMATIC_WORKFLOW=false
 export HTTP_BIND=127.0.0.1:18080 HTTPS_BIND=127.0.0.1:18443 SITE_ADDRESS=:80
 trap 'docker compose down -v --remove-orphans' EXIT
 docker compose up -d --wait --pull missing

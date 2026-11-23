@@ -15,6 +15,7 @@ from . import views
 
 router = APIRouter(tags=["requests"])
 AI_ENABLED = bool(os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_BASE_URL"))
+AUTO_WORKFLOW = os.getenv("AUTOMATIC_WORKFLOW", "true").lower() == "true"
 STEPS = ("TRIAGE", "TZ", "QUOTES_NMC", "TENDER", "PACKAGE")
 SECTIONS = {
     "scope": "Предмет работ", "volume": "Объём и материалы",
@@ -64,6 +65,8 @@ def summary(row, resident, detail=False):
         if resident and d.get("intake", {}).get("pending"):
             result["clarificationQuestions"] = d["intake"]["questions"]
     if not resident:
+        if d.get("automatic"):
+            result.update(automatic=True, waitingFor=d.get("waitingFor"))
         triage = d["triage"]["confirmed"] or d["triage"]["proposal"]
         result.update(urgency=triage and triage["urgency"], currentStep=STEPS[step], currentStepState=docs[step]["state"])
         if detail:
@@ -120,6 +123,7 @@ def create_request(body: RequestInput, user: User, conn: Conn,
     created_at = stamp()
     d = dict(body.model_dump(exclude={"photoFileIds"}), address=user.address, createdAt=created_at,
              updatedAt=created_at, status="ACCEPTED", author=actor(user), photos=[], quotes={},
+             automatic=AUTO_WORKFLOW, scopeRevision=0, waitingFor="TZ",
              triage=dict(state="PROCESSING" if AI_ENABLED else "DRAFT_READY", proposal=None, confirmed=None),
              tz=working_doc(), nmc=working_doc(), tender=dict(state="NOT_STARTED", documents=[], winnerProposal=None,
              selectedWinner=None, contract=None), package=dict(working_doc(), documents=[]))
@@ -162,10 +166,12 @@ def default_tz(description):
 
 @router.post("/requests/{ident}/triage/confirm", response_model=views.Triage)
 def confirm(ident: str, body: TriageInput, user: User, conn: Conn):
+    from .workflow import advance, scope_changed
     allow(user, "STAFF")
     row = find(conn, user, ident, True)
     d = row.data
-    require(d["triage"]["state"] != "APPROVED")
+    previous = d["triage"].get("confirmed")
+    require(d.get("automatic") or d["triage"]["state"] != "APPROVED")
     confirmed = body.model_dump()
     if d.get("intake"):
         d["intake"]["pending"] = False
@@ -174,8 +180,18 @@ def confirm(ident: str, body: TriageInput, user: User, conn: Conn):
     tz = d["tz"]
     if not tz["version"]:
         tz.update(version=1, origin="STAFF", sections=default_tz(d["description"]), openQuestions=[])
-    state(tz, "DRAFT_READY")
+    if d.get("automatic") and previous and previous["workType"] != confirmed["workType"]:
+        tz.update(version=tz["version"] + 1, origin="STAFF", sections=default_tz(d["description"]), openQuestions=[])
+        scope_changed(row)
+        if AI_ENABLED:
+            enqueue(conn, row.id, "redraft", "", tz)
+            state(tz, "PROCESSING")
+        else:
+            state(tz, "DRAFT_READY")
+    else:
+        state(tz, "DRAFT_READY")
     d["status"] = "IN_PROGRESS"
+    advance(conn, row)
     save(conn, row)
     return public(d["triage"])
 
@@ -187,11 +203,13 @@ def tz(ident: str, user: User, conn: Conn):
 
 @router.put("/requests/{ident}/tz", response_model=views.Tz, response_model_exclude_unset=True)
 def edit_tz(ident: str, body: TzInput, user: User, conn: Conn):
+    from .workflow import advance, scope_changed
     allow(user, "STAFF")
     row = find(conn, user, ident, True)
     doc = row.data["tz"]
     version(doc["version"], body.baseVersion)
-    require(doc["state"] in ("DRAFT_READY", "NEEDS_REWORK"))
+    automatic = row.data.get("automatic")
+    require(doc["state"] in ("DRAFT_READY", "NEEDS_REWORK") or (automatic and doc["state"] == "APPROVED"))
     sections = {s["id"]: s for s in doc["sections"]}
     questions = {q["id"]: q for q in doc["openQuestions"]}
     for patch in body.sections:
@@ -203,7 +221,12 @@ def edit_tz(ident: str, body: TzInput, user: User, conn: Conn):
             raise invalid("Неизвестный вопрос")
         questions[patch.questionId]["answer"] = patch.answer
     doc.update(version=doc["version"] + 1, origin="STAFF")
+    if automatic and (body.sections or body.answers):
+        if row.data.get("intake"):
+            row.data["intake"]["pending"] = False
+        scope_changed(row)
     state(doc, "DRAFT_READY")
+    advance(conn, row)
     save(conn, row)
     return public(doc)
 
@@ -219,12 +242,17 @@ def restart(ident: str, step: Literal["TRIAGE", "TZ", "QUOTES_NMC", "TENDER", "P
         state(doc, "PROCESSING")
         enqueue(conn, row.id, "triage", "", doc)
     else:
-        require(row.data["nmc"]["state"] not in ("IN_REVIEW", "APPROVED"))
+        require(row.data.get("automatic") or row.data["nmc"]["state"] not in ("IN_REVIEW", "APPROVED"))
         failed = [q for q in row.data["quotes"].values() if q["extraction"] == "AI_FAILED" and not q.get("editedByStaff")]
+        if row.data.get("automatic"):
+            failed = [q for q in failed if q.get("scopeRevision", 0) == row.data.get("scopeRevision", 0)]
         require(bool(failed))
         for quote in failed:
             quote["extraction"] = "EXTRACTING"
             enqueue(conn, row.id, "quote", quote["id"], quote)
+        if row.data.get("automatic"):
+            from .workflow import advance
+            advance(conn, row)
     save(conn, row)
     return {"status": "queued"}
 
@@ -235,11 +263,36 @@ def answer_clarifications(ident: str, body: ResidentAnswers, user: User, conn: C
     row = find(conn, user, ident, True)
     d = row.data
     intake = d.get("intake", {})
-    require(intake.get("pending", False) and d["triage"]["state"] != "APPROVED")
+    require(intake.get("pending", False) and (d["triage"]["state"] != "APPROVED" or d.get("automatic")))
     if len(body.answers) != len(intake["questions"]):
         raise invalid("Ответьте на все вопросы или укажите, что ответ неизвестен")
     intake.update(pending=False, answers=body.answers)
+    if d.get("automatic"):
+        from .workflow import advance, scope_changed
+        scope_changed(row, refresh_letter=False)
+        state(d["triage"], "PROCESSING")
+        advance(conn, row)
     state(d["triage"], "PROCESSING")
     enqueue(conn, row.id, "triage", "", d["triage"])
     save(conn, row)
     return summary(row, True, True)
+
+
+@router.post("/requests/{ident}/automation", response_model=views.RequestDetail, response_model_exclude_unset=True)
+def enable_automation(ident: str, user: User, conn: Conn):
+    from .workflow import SYSTEM_ACTOR, advance, complete_tz
+
+    allow(user, "STAFF")
+    row = find(conn, user, ident, True)
+    d = row.data
+    if not d.get("automatic"):
+        require(d["status"] != "COMPLETED")
+        d["automatic"] = True
+        triage = d["triage"]
+        if (triage.get("proposal") and triage["state"] == "DRAFT_READY" and complete_tz(d["tz"])
+                and not d.get("intake", {}).get("pending")):
+            triage.update(confirmed=triage["proposal"], confirmedBy=SYSTEM_ACTOR, confirmedAt=stamp())
+            state(triage, "APPROVED")
+        advance(conn, row)
+        save(conn, row)
+    return summary(row, False, True)

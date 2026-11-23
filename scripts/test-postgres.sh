@@ -9,6 +9,7 @@ createdb -h "$tmp/socket" nebula
 export DATABASE_URL="postgresql+psycopg:///nebula?host=$tmp/socket" FILE_ROOT="$tmp/files" SECURE_COOKIES=false
 export SMOKE_BASE=http://127.0.0.1:18490
 unset OPENAI_API_KEY OPENAI_BASE_URL
+export AUTOMATIC_WORKFLOW=false
 uv run --locked alembic upgrade head
 uv run --locked alembic downgrade base
 uv run --locked alembic upgrade head

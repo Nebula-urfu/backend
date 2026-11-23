@@ -10,6 +10,7 @@ from .errors import invalid, missing, require, version
 from .requests import actor, find, page, save, state
 from .schemas import DecisionInput, VersionInput
 from . import views
+from .workflow import advance, scope_changed
 
 router = APIRouter(tags=["approvals"])
 KINDS = {"tz": "TZ", "nmc": "NMC", "package": "PACKAGE"}
@@ -20,6 +21,7 @@ def submit(ident: str, kind: Literal["tz", "nmc", "package"], body: VersionInput
     allow(user, "STAFF")
     row = find(conn, user, ident, True)
     doc = row.data[kind]
+    require(not row.data.get("automatic"))
     version(doc["version"], body.version)
     require(doc["state"] == "DRAFT_READY")
     if kind == "nmc":
@@ -103,8 +105,9 @@ def apply_corrections(conn, row, doc, edits):
 @router.post("/approvals/{ident}/{action}", response_model=views.Approval)
 def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput, user: User, conn: Conn):
     allow(user, "REVIEWER")
-    approval = approval_row(ident, user, conn, True)
+    approval = approval_row(ident, user, conn)
     row = find(conn, user, approval.request_id, True)
+    approval = approval_row(ident, user, conn, True)
     version(approval.version, body.subjectVersion)
     doc = row.data[approval.kind]
     version(doc["version"], body.subjectVersion)
@@ -113,21 +116,32 @@ def decide(ident: str, action: Literal["approve", "reject"], body: DecisionInput
     if action == "reject" and not comment:
         raise invalid("Укажите причину возврата")
     passed = action == "approve"
-    if body.corrections:
-        require(not passed and approval.kind == "tz")
-        apply_corrections(conn, row, doc, body.corrections)
+    corrections = body.corrections
+    auto_package = row.data.get("automatic") and approval.kind == "package"
+    if corrections:
+        require(not passed and (approval.kind == "tz" or auto_package))
+        scope_edit = bool(corrections.sections or (corrections.triage and
+            corrections.triage.workType != row.data["triage"]["confirmed"]["workType"]))
+        apply_corrections(conn, row, row.data["tz"], corrections)
+        if auto_package and scope_edit:
+            scope_changed(row, refresh_letter=not corrections.letter)
     state(doc, "APPROVED" if passed else "NEEDS_REWORK")
     if not passed:
         doc["lastReviewComment"] = comment
     if approval.kind == "nmc" and passed:
         state(row.data["tender"], "DRAFT_READY")
     if approval.kind == "package":
+        if auto_package and not passed:
+            row.data["waitingFor"] = "CORRECTIONS"
         state(row.data["tender"], "APPROVED" if passed else "NEEDS_REWORK")
         if passed:
             doc["approvedAt"] = stamp()
             row.data["status"] = "COMPLETED"
+            row.data.pop("waitingFor", None)
     approval.data.update(state="APPROVED" if passed else "REJECTED", decidedBy=actor(user), decidedAt=stamp(), comment=comment or None)
     conn.execute(update(approvals).where(approvals.c.id == ident).values(data=approval.data))
+    if auto_package and corrections:
+        advance(conn, row)
     save(conn, row)
     return without_subject(approval.data)
 

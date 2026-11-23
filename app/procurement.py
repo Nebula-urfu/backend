@@ -1,5 +1,3 @@
-import os
-from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter
 from sqlalchemy import select, update
@@ -11,11 +9,9 @@ from .errors import invalid, missing, require, version
 from .requests import AI_ENABLED, actor, attach, enqueue, find, page, public, read, save, state
 from .schemas import CalculationInput, LetterInput, QuoteEdit, QuoteInput, Recipients, WinnerInput
 from . import views
+from .workflow import MIN_QUOTES, advance, calculate_amount, complete_tz
 
 router = APIRouter(tags=["procurement"])
-MIN_QUOTES = int(os.getenv("MIN_QUOTES", "3"))
-if not 1 <= MIN_QUOTES <= 50:
-    raise ValueError("MIN_QUOTES must be between 1 and 50")
 
 
 def directory(conn, user):
@@ -38,13 +34,16 @@ def edit_letter(ident: str, body: LetterInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     tz = row.data["tz"]
     version(tz["version"], body.baseVersion)
-    require(tz["state"] in ("DRAFT_READY", "NEEDS_REWORK"))
+    require(tz["state"] in ("DRAFT_READY", "NEEDS_REWORK") or (row.data.get("automatic") and tz["state"] == "APPROVED"))
     if any(i not in directory(conn, user) for i in body.contractorIds):
         raise missing()
     letter = body.model_dump(exclude={"baseVersion"})
     tz["letter"] = letter
+    if row.data.get("automatic") and row.data.get("intake"):
+        row.data["intake"]["pending"] = False
     tz["version"] += 1
     state(tz, "DRAFT_READY")
+    advance(conn, row)
     save(conn, row)
     return tz
 
@@ -64,6 +63,9 @@ def quote_request(ident: str, body: Recipients, user: User, conn: Conn):
 
 
 def editable(row):
+    if row.data.get("automatic"):
+        require(row.data["tz"]["state"] == "APPROVED" and complete_tz(row.data["tz"]))
+        return row.data["quotes"]
     require(row.data["tz"]["state"] == "APPROVED" and row.data["nmc"]["state"] not in ("IN_REVIEW", "APPROVED"))
     return row.data["quotes"]
 
@@ -78,7 +80,9 @@ def invalidate(row):
 @router.get("/requests/{ident}/quotes", response_model=views.Page[views.Quote])
 def list_quotes(ident: str, user: User, conn: Conn):
     allow(user, "STAFF", "REVIEWER")
-    return page([public(q) for q in find(conn, user, ident).data["quotes"].values()])
+    d = find(conn, user, ident).data
+    return page([dict(public(q), staleScope=bool(d.get("automatic") and
+                      q.get("scopeRevision", 0) != d.get("scopeRevision", 0))) for q in d["quotes"].values()])
 
 
 @router.post("/requests/{ident}/quotes", status_code=202, response_model=views.Quote)
@@ -91,10 +95,16 @@ def add_quote(ident: str, body: QuoteInput, user: User, conn: Conn):
     attachments = attach(conn, user, row.id, body.fileIds, "quote")
     quote = dict(id=uid(), contractorId=body.contractorId, extraction="EXTRACTING" if AI_ENABLED else "AI_FAILED",
                  files=attachments, version=1, data=None, createdAt=stamp())
+    quote["scopeRevision"] = row.data.get("scopeRevision", 0)
     quotes[quote["id"]] = quote
+    if row.data.get("automatic") and row.data.get("intake"):
+        row.data["intake"]["pending"] = False
     if AI_ENABLED:
         enqueue(conn, row.id, "quote", quote["id"], quote)
-    invalidate(row)
+    if row.data.get("automatic"):
+        advance(conn, row)
+    else:
+        invalidate(row)
     save(conn, row)
     return public(quote)
 
@@ -106,7 +116,10 @@ def delete_quote(ident: str, quote_id: str, user: User, conn: Conn):
     if not quote:
         raise missing()
     conn.execute(update(files).where(files.c.id.in_([f["fileId"] for f in quote["files"]])).values(purpose="archived_quote"))
-    invalidate(row)
+    if row.data.get("automatic"):
+        advance(conn, row)
+    else:
+        invalidate(row)
     save(conn, row)
 
 
@@ -121,7 +134,11 @@ def edit_quote(ident: str, quote_id: str, body: QuoteEdit, user: User, conn: Con
         raise invalid("Укажите подрядчика и полную сопоставимую цену")
     quote.update(data=body.data.model_dump(mode="json"), version=quote["version"] + 1,
                  extraction="EXTRACTED", editedByStaff=True)
-    invalidate(row)
+    quote["scopeRevision"] = row.data.get("scopeRevision", 0)
+    if row.data.get("automatic"):
+        advance(conn, row)
+    else:
+        invalidate(row)
     save(conn, row)
     return public(quote)
 
@@ -156,6 +173,8 @@ def nmc(ident: str, user: User, conn: Conn):
 def calculate(ident: str, body: CalculationInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     quotes = editable(row)
+    if row.data.get("automatic"):
+        raise invalid("Для этой заявки НМЦ рассчитывается автоматически")
     ids = body.quoteIds if body.quoteIds is not None else [i for i, q in quotes.items() if q.get("editedByStaff")]
     if len(set(ids)) != len(ids) or any(i not in quotes or not quotes[i].get("editedByStaff") for i in ids):
         raise invalid("Проверьте поля выбранных КП")
@@ -163,16 +182,7 @@ def calculate(ident: str, body: CalculationInput, user: User, conn: Conn):
     known_contractors = [quotes[i]["contractorId"] for i in ids if quotes[i]["contractorId"]]
     if len(companies) != len(ids) or len(set(known_contractors)) != len(known_contractors) or len(ids) < MIN_QUOTES:
         raise invalid(f"Нужно не менее {MIN_QUOTES} проверенных КП от разных подрядчиков")
-    values = [Decimal(quotes[i]["data"]["totalPrice"]["amount"]) for i in ids]
-    amount = (sum(values) / len(values)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    doc = row.data["nmc"]
-    doc.update(version=doc["version"] + 1, amount=dict(amount=str(amount), currency="RUB"),
-               method="average_of_quotes", quoteIds=ids, quoteVersions={i: quotes[i]["version"] for i in ids},
-               justification=f"Среднее арифметическое {len(values)} проверенных полных цен в RUB по одному ТЗ. "
-                             "Сопоставимость объёма, условий и налогов проверяет сотрудник. "
-                             "Округление до копейки, половина вверх. Цены: " + ", ".join(map(str, values)),
-               calculatedAt=stamp())
-    state(doc, "DRAFT_READY")
+    doc = calculate_amount(row.data["nmc"], quotes, ids)
     save(conn, row)
     return doc
 
@@ -187,6 +197,11 @@ def choose_winner(ident: str, body: WinnerInput, user: User, conn: Conn):
     row = staff_request(ident, user, conn)
     d = row.data
     package = d["package"]
+    if d.get("automatic"):
+        require(package["state"] in ("IN_REVIEW", "APPROVED", "NEEDS_REWORK"))
+        advance(conn, row, preferred=body.quoteId, selected_by=actor(user), comment=body.comment)
+        save(conn, row)
+        return d["tender"]
     require(d["nmc"]["state"] == "APPROVED" and package["state"] not in ("IN_REVIEW", "APPROVED"))
     if body.quoteId not in d["nmc"]["quoteIds"]:
         raise invalid("Выберите предложение из утверждённого расчёта")

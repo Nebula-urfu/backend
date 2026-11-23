@@ -14,6 +14,7 @@ from sqlalchemy import select, update
 
 from .db import STORAGE, contractors, engine, jobs, model_usage, now, requests, stamp, uid
 from .requests import AI_ENABLED, SECTIONS, save, state
+from .workflow import SYSTEM_ACTOR, advance
 from .schemas import QuoteData, Short, Text, TriageInput
 
 MAX_ATTEMPTS = 3
@@ -80,7 +81,7 @@ def quote_text(ref):
 
 def inference(job, data):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY") or "local", base_url=os.getenv("OPENAI_BASE_URL"), timeout=35, max_retries=0)
-    if job.kind == "triage":
+    if job.kind in ("triage", "redraft"):
         schema = Draft
         instruction = (
             "Ты готовишь черновик для сотрудника управляющей компании. Верни один JSON-объект. "
@@ -106,6 +107,9 @@ def inference(job, data):
         directory = data.get("directory", [])
         inputs.append({"type": "text", "text": "Справочник адресатов: " + ", ".join(
             f"{i}: {entry['name']}" for i, entry in enumerate(directory, 1))})
+        if job.kind == "redraft":
+            inputs.append({"type": "text", "text": "Маршрут уже проверен сотрудником. Подготовь ТЗ и письмо для следующего типа работ: " +
+                           ascii_safe_text(data["triage"]["confirmed"]["workType"])})
         intake = data.get("intake", {})
         if intake.get("answers"):
             inputs.extend({"type": "text", "text": "Уточнение жителя: " + question + " — " + ascii_safe_text(answer)}
@@ -144,13 +148,31 @@ def inference(job, data):
 
 
 def target(job, data):
-    return data["triage"] if job.kind == "triage" else data["quotes"].get(job.target)
+    if job.kind in ("triage", "redraft"):
+        return data["tz" if job.kind == "redraft" else "triage"]
+    return data["quotes"].get(job.target)
 
 
 def relevant(job, doc):
     return bool(doc and doc.get("generation") == job.generation and (
-        doc["state"] == "PROCESSING" if job.kind == "triage" else doc["extraction"] == "EXTRACTING"
+        doc["state"] == "PROCESSING" if job.kind in ("triage", "redraft") else doc["extraction"] == "EXTRACTING"
     ))
+
+
+def update_draft(data, result, directory):
+    intake = data.get("intake", {})
+    picks = [directory[i - 1]["id"] for i in dict.fromkeys(result.get("contractorNumbers", []))
+             if 1 <= i <= len(directory)]
+    if not picks and directory:
+        picks = [entry["id"] for entry in directory[:3]]
+    letter = dict(contractorIds=picks, subject=result["letterSubject"], body=result["letterBody"])
+    tz = data["tz"]
+    questions = [dict(id=f"resident-{i}", text=q, answer=a)
+                 for i, (q, a) in enumerate(zip(intake.get("questions", []), intake.get("answers", [])))]
+    tz.update(version=tz["version"] + 1, origin="AI", sections=[
+        dict(id=k, title=title, text=result[k]) for k, title in SECTIONS.items()
+    ], openQuestions=questions, letter=letter)
+    state(tz, "DRAFT_READY")
 
 
 def process_one():
@@ -165,7 +187,7 @@ def process_one():
             return True
         conn.execute(update(jobs).where(jobs.c.id == job.id).values(state="running", attempt=job.attempt + 1))
         directory = []
-        if job.kind == "triage":
+        if job.kind in ("triage", "redraft"):
             directory = list(conn.execute(select(contractors.c.data).where(contractors.c.org == row.org)
                              .order_by(contractors.c.data["name"].astext, contractors.c.id).limit(50)).scalars())
 
@@ -189,32 +211,35 @@ def process_one():
         conn.execute(update(jobs).where(jobs.c.id == job.id).values(state=outcome))
         if not active or retry:
             return True
-        if job.kind == "triage":
+        if job.kind in ("triage", "redraft"):
+            if job.kind == "redraft":
+                if result:
+                    update_draft(row.data, result, directory)
+                state(doc, "DRAFT_READY")
+                advance(conn, row)
+                save(conn, row)
+                return True
             if result:
                 doc["proposal"] = result["triage"]
                 intake = row.data.get("intake", {})
                 questions = result.get("questions", [])
                 if questions and not intake and result["triage"]["urgency"] != "EMERGENCY":
                     row.data["intake"] = {"pending": True, "questions": questions}
-                picks = [directory[i - 1]["id"] for i in dict.fromkeys(result.get("contractorNumbers", []))
-                         if 1 <= i <= len(directory)]
-                if not picks and directory:
-                    picks = [entry["id"] for entry in directory[:3]]
-                letter = dict(contractorIds=picks, subject=result["letterSubject"], body=result["letterBody"])
                 tz = row.data["tz"]
                 if not tz["version"] or (tz.get("origin") == "AI" and tz["version"] == 1):
-                    questions_and_answers = [dict(id=f"resident-{i}", text=q, answer=a)
-                                             for i, (q, a) in enumerate(zip(intake.get("questions", []), intake.get("answers", [])))]
-                    tz.update(version=tz["version"] + 1, origin="AI", sections=[
-                        dict(id=k, title=title, text=result[k]) for k, title in SECTIONS.items()
-                    ], openQuestions=questions_and_answers, letter=letter)
-                    state(tz, "DRAFT_READY")
+                    update_draft(row.data, result, directory)
                 state(doc, "DRAFT_READY")
             else:
                 state(doc, "DRAFT_READY" if doc.get("proposal") else "AI_FAILED")
+            if row.data.get("automatic") and doc.get("proposal"):
+                doc.update(confirmed=doc["proposal"], confirmedBy=SYSTEM_ACTOR, confirmedAt=stamp())
+                state(doc, "APPROVED")
+                advance(conn, row)
         else:
             doc.update(extraction="EXTRACTED" if result else "AI_FAILED", data=result, version=doc["version"] + 1)
             row.data["nmc"]["updatedAt"] = stamp()
+            if row.data.get("automatic") and doc.get("scopeRevision", 0) == row.data.get("scopeRevision", 0):
+                advance(conn, row)
         save(conn, row)
     return True
 

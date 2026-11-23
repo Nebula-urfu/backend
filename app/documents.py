@@ -87,7 +87,8 @@ def download(ident: str, user: User, conn: Conn):
             raise missing()
         if row.purpose == "package":
             package = req.data["package"]
-            if user.role == "STAFF" and (package["version"] != row.version or package["state"] != "APPROVED"):
+            staff_states = ("APPROVED", "IN_REVIEW", "NEEDS_REWORK") if req.data.get("automatic") else ("APPROVED",)
+            if user.role == "STAFF" and (package["version"] != row.version or package["state"] not in staff_states):
                 raise missing()
     elif row.owner != user.id:
         raise missing()
@@ -172,8 +173,10 @@ def generate(conn, user, row, version, winner=None):
 @router.get("/requests/{ident}/package/zip")
 def package_zip(ident: str, user: User, conn: Conn, version: int | None = None):
     allow(user, "STAFF", "REVIEWER")
-    package = find(conn, user, ident).data["package"]
-    require(package["state"] == "APPROVED")
+    data = find(conn, user, ident).data
+    package = data["package"]
+    can_preview = data.get("automatic") or user.role == "REVIEWER"
+    require(package["state"] == "APPROVED" or (can_preview and package["state"] in ("IN_REVIEW", "NEEDS_REWORK")))
     if version is not None:
         check_version(package["version"], version)
     out = io.BytesIO()

@@ -283,7 +283,8 @@
             "enum": [
               "PENDING",
               "APPROVED",
-              "REJECTED"
+              "REJECTED",
+              "SUPERSEDED"
             ],
             "title": "State",
             "type": "string"
@@ -390,7 +391,8 @@
             "enum": [
               "PENDING",
               "APPROVED",
-              "REJECTED"
+              "REJECTED",
+              "SUPERSEDED"
             ],
             "title": "State",
             "type": "string"
@@ -926,7 +928,8 @@
           "decision": {
             "enum": [
               "APPROVED",
-              "REJECTED"
+              "REJECTED",
+              "SUPERSEDED"
             ],
             "title": "Decision",
             "type": "string"
@@ -1249,6 +1252,16 @@
             ],
             "title": "Lastreviewcomment"
           },
+          "nmcSnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Nmc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "state": {
             "enum": [
               "NOT_STARTED",
@@ -1261,6 +1274,26 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "tenderSnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tender"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tzSnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tz"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "updatedAt": {
             "anyOf": [
@@ -1564,6 +1597,11 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "staleScope": {
+            "default": false,
+            "title": "Stalescope",
+            "type": "boolean"
           },
           "version": {
             "title": "Version",
@@ -1958,6 +1996,17 @@
               }
             ]
           },
+          "automatic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automatic"
+          },
           "clarificationQuestions": {
             "anyOf": [
               {
@@ -2080,6 +2129,17 @@
               }
             ],
             "title": "Urgency"
+          },
+          "waitingFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waitingfor"
           }
         },
         "required": [
@@ -2135,6 +2195,17 @@
           "address": {
             "title": "Address",
             "type": "string"
+          },
+          "automatic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automatic"
           },
           "createdAt": {
             "format": "date-time",
@@ -2223,6 +2294,17 @@
               }
             ],
             "title": "Urgency"
+          },
+          "waitingFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waitingfor"
           }
         },
         "required": [
@@ -2535,8 +2617,14 @@
             "type": "string"
           },
           "winnerProposal": {
-            "title": "Winnerproposal",
-            "type": "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WinnerProposal"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2950,6 +3038,24 @@
           "quoteId"
         ],
         "title": "WinnerInput",
+        "type": "object"
+      },
+      "WinnerProposal": {
+        "properties": {
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quoteId",
+          "rationale"
+        ],
+        "title": "WinnerProposal",
         "type": "object"
       }
     }
@@ -4337,6 +4443,98 @@
           }
         },
         "summary": "Request Detail",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/requests/{ident}/automation": {
+      "post": {
+        "operationId": "enable_automation_api_v1_requests__ident__automation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ident",
+            "required": true,
+            "schema": {
+              "title": "Ident",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemView"
+                }
+              }
+            },
+            "description": "Too many login attempts"
+          }
+        },
+        "summary": "Enable Automation",
         "tags": [
           "requests"
         ]
