@@ -1,0 +1,11 @@
+[project]
+name = "nebula-procurement"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+dependencies = ["fastapi", "uvicorn", "sqlalchemy", "psycopg[binary]", "alembic", "python-multipart", "openai", "pydantic", "pillow", "python-docx", "openpyxl", "pypdf", "argon2-cffi"]
+
+[dependency-groups]
+dev = ["pytest", "httpx"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
